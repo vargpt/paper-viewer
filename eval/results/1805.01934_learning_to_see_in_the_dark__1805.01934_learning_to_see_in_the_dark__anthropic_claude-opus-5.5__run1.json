@@ -1,0 +1,54 @@
+{
+  "paper_id": "1805.01934_learning_to_see_in_the_dark",
+  "paper_title": "Learning to See in the Dark",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/without_agent/1805.01934_learning_to_see_in_the_dark__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 0,
+    "major_count": 0,
+    "minor_count": 0,
+    "items": []
+  },
+  "consistency": {
+    "score": 9,
+    "rationale": "The page covers the problem, the SID dataset, the packing and amplification pipeline, the U-net default and CAN alternative, and the training details. It also reports the MTurk perceptual results, the iPhone transfer, the full Table 3 ablations and the limitations. I checked the numbers against the paper: 5094 and 424 images, Tables 1–3, the 1180 comparisons by 10 workers, 0.38 s and 0.66 s runtime, learning rates and epochs. All match. Toy simulations are clearly labeled as illustrative and not from the paper. The 'perfectly aligned burst' and 'privileged information' caveats are preserved, as are the preliminary status of cross-sensor transfer and the limitations. Omissions are minor: the qualitative Figures 5–9 are not shown, and the 'low-light enhancement' related-work discussion is not covered.",
+    "missing_key_points": [
+      "Qualitative comparison figures (5, 6, 7, 9) are not reproduced; only described in text",
+      "Related work on denoising and low-light enhancement is only briefly summarized",
+      "Detail that a low-resolution preview can run in real time is included, but the paper's call for further architecture and training optimization is only implied"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 2,
+        "rationale": "Dense text, jargon (SNR, Bayer, PSNR), dark UI. The photon-noise simulation and the brightness slider offer some visual play, but there are no simple sentences or everyday analogies. A young child would not follow it."
+      },
+      "15": {
+        "score": 6,
+        "rationale": "The photon-noise explanation and the interactive sliders are engaging, and many terms are defined. Sections on packing, PSNR/SSIM and ablations are heavy for a high-schooler, though a motivated one would get the gist."
+      },
+      "25": {
+        "score": 9,
+        "rationale": "Clear structure, accurate numbers, interactive charts of the ablations and perceptual results, and the pipeline comparison. Jargon is defined in plain words. The reader comes away understanding what was done, why, and its limits."
+      },
+      "35": {
+        "score": 9,
+        "rationale": "Fast to scan thanks to the sectioned nav, stat cards, tables and a bottom-line callout. Takeaways and caveats (privileged baselines, preliminary transfer) are explicit. Very useful for an adjacent-field professional."
+      },
+      "45": {
+        "score": 8,
+        "rationale": "Practical implications, such as raw input mattering and the speed limit, are clear. The candid limitations section builds trust. Some technical depth, such as sub-pixel layers and packing, is more than a manager needs, but it is easy to skip."
+      },
+      "55": {
+        "score": 6,
+        "rationale": "Plain-language explanations are present, but terms like ISO, SNR, Bayer, U-net and PSNR appear in quantity. The dark theme and the amount of dense text with interactive widgets may tire a less technical reader."
+      },
+      "65": {
+        "score": 5,
+        "rationale": "The structure is clear and body font is reasonably sized, but muted gray-on-dark captions and notes are low contrast. The page also has heavy jargon and many interactive controls, and it depends on JavaScript and an external Plotly CDN. Real-world relevance (night photography) is clear but the page is demanding."
+      }
+    },
+    "mean_score": 6.43
+  }
+}

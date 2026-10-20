@@ -1,0 +1,69 @@
+{
+  "paper_id": "Konate_SphereEdit_WACV2026",
+  "paper_title": "SphereEdit: Spherical Semantic Editing in Diffusion Models",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/without_agent/sphereedit.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 2,
+    "major_count": 0,
+    "minor_count": 2,
+    "items": [
+      {
+        "html_quote": "Because cos² + sin² = 1, the edit strength never grows as you mix.",
+        "paper_evidence": "Sec. 3.2 and Eq. 8 sum the weighted unit directions, ∆ε = Σ λk v̂k. The paper only lists 'bounded magnitude' as a design criterion and does not claim the edit strength never grows. The 1D case also allows scales up to ±7.5 (Fig. 4).",
+        "severity": "minor",
+        "explanation": "The coefficients lie on the unit sphere, but a sum of non-orthogonal unit vectors can have a larger norm than any single term. 'Never grows' is an overclaim of the paper's boundedness argument."
+      },
+      {
+        "html_quote": "Very tight. The masks start to fragment the target (diffuse lipstick loses coverage first), and the paper reports weaker edits and identity preservation here.",
+        "paper_evidence": "Sec. 4.4: 'Very high thresholds (q > 0.8) prune masks too aggressively, fragmenting the target region and reducing identity preservation.'",
+        "severity": "minor",
+        "explanation": "The paper reports fragmented regions and reduced identity preservation. It does not report 'weaker edits' at high q."
+      }
+    ]
+  },
+  "consistency": {
+    "score": 8,
+    "rationale": "The page accurately conveys the problem (leakage, drift, poor composition), the training-free method (attribute directions from noise differences, spherical coefficients, cross-attention masks, overlap-aware Gram-Schmidt, DDIM injection), and the implementation details (SD v1.5, 50 steps, q=0.8, ~12 s on an L40). Table 1 values and the per-task takeaways match the paper exactly, including the LPIPS gap to SEGA and TurboEdit's 0.0012 CLIP-T edge. The two stated limitations are covered. The interactive attention maps are explicitly labelled as illustrations. Omissions are minor: the DDIM inversion needed for real images, the qualitative figures, the small evaluation scale (100 images, two tasks), and the paper's own limited baseline coverage.",
+    "missing_key_points": [
+      "Editing real images relies on DDIM inversion",
+      "Actual qualitative results (Figs. 1, 3) are not shown, only described in text",
+      "Quantitative evaluation is small: 100 FFHQ images, two compositional tasks, no user study",
+      "The Fig. 5 caption's q convention (q=1 means no mask) differs from the text, which is not discussed",
+      "The paper's claim of state-of-the-art results and its related-work positioning are mostly absent"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 1,
+        "rationale": "The page is full of equations, sliders and jargon (UNet, Gram-Schmidt, quantile). It has no pictures of actual edited images and no simple analogies, so a young child could not follow it."
+      },
+      "15": {
+        "score": 4,
+        "rationale": "The sliders and the face-mask demo are engaging and the lipstick/glasses example is intuitive. But vectors, unit spheres, cross-attention and CLIP/DINO/LPIPS are only partly explained, so most of it is over their head."
+      },
+      "25": {
+        "score": 8,
+        "rationale": "Clear structure runs from problem to idea to method to results to limitations. Equations are paired with interactive widgets, the algorithm is mapped to the steps, and the results table is accurate. It is a strong fit for a technical graduate."
+      },
+      "35": {
+        "score": 8,
+        "rationale": "The takeaway comes fast from the lede and chips. The table and notes show where the method wins or loses honestly, and the limitations are stated. The lack of real example images is a small drawback."
+      },
+      "45": {
+        "score": 7,
+        "rationale": "It conveys practical points such as training-free operation, ~12 s per edit, and the best and worst metrics. Trust is supported by the illustration labelling and the limitations. However, dense math and interactive jargon slow a non-specialist manager."
+      },
+      "55": {
+        "score": 5,
+        "rationale": "The plain-language problem section helps. The core sections rely on unit-vector, projection and quantile notation, and the interactive widgets may be unfamiliar. There are no real images to ground the idea."
+      },
+      "65": {
+        "score": 4,
+        "rationale": "The structure is clear and the text is readable. Much of the content is unexplained technical notation, small mono-font labels and widget interactions that demand familiarity with ML terms. Real-world relevance is conveyed only briefly."
+      }
+    },
+    "mean_score": 5.29
+  }
+}

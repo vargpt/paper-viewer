@@ -1,0 +1,55 @@
+{
+  "paper_id": "Konate_SphereEdit_WACV2026",
+  "paper_title": "SphereEdit: Spherical Semantic Editing in Diffusion Models",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/baseline/Paper1_salamata__anthropic_claude-sonnet-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 0,
+    "major_count": 0,
+    "minor_count": 0,
+    "items": []
+  },
+  "consistency": {
+    "score": 9,
+    "rationale": "The page reproduces the problem, the method (Eqs. 3–9, overlap-aware orthogonalization, cross-attention masks), the setup (SD v1.5, 50 steps, q=0.8, seed 0, ~12 s on an L40, 100 FFHQ images) and all Table 1 numbers correctly. It also gets the nuanced results right: SEGA has the better LPIPS on Glasses+Mustache, and TurboEdit wins CLIP-T by 0.0012 on Eyebrow+Lipstick. The ablations (±7.5 scales, q sweep) and both limitations are covered accurately. The page flags its own toy demos as not from the paper and adds a careful, correct caveat about θ=φ=π/2 giving λ=(0,0,1). Omissions are minor: no actual image results, little on the related-work context, and no mention of Figure 3's specific comparisons beyond the text.",
+    "missing_key_points": [
+      "No actual qualitative images from Figs. 1, 3, 4 and 5; only text descriptions",
+      "Related-work positioning (DiffusionCLIP, InstructPix2Pix, etc.) is largely omitted",
+      "Antipodal symmetry is described as a claim and not tied to the paper's evidence (Fig. 4 only)",
+      "Comparative speed versus baselines is not discussed (the paper doesn't give it either)"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 2,
+        "rationale": "Dense technical text, equations and sliders with no pictures of real edits. A young child could only enjoy playing with the slider, and wouldn't grasp the idea."
+      },
+      "15": {
+        "score": 5,
+        "rationale": "The arrow-on-a-sphere analogy and sliders are engaging, and the mixing idea is approachable. Terms like cross-attention, denoiser, Gram–Schmidt and CLIP-T, and the equations, are heavy for a high schooler."
+      },
+      "25": {
+        "score": 8,
+        "rationale": "Clear structure, accurate equations, interactive demos and an honest reading of the results table. A graduate can follow what was done and how strong the evidence is."
+      },
+      "35": {
+        "score": 8,
+        "rationale": "Quick takeaway, clear method steps, a results table with the nuance on wins and losses, and a limitations section. Well suited to a professional wanting the gist and the caveats."
+      },
+      "45": {
+        "score": 7,
+        "rationale": "Practical aspects are covered (training-free, 12 s per edit, limitations, code link). It leans technical and lacks real-world impact framing or example images."
+      },
+      "55": {
+        "score": 5,
+        "rationale": "The problem is explained plainly at the start. Later sections rely on ML jargon and equations, with little plain-language glossing outside the metric definitions."
+      },
+      "65": {
+        "score": 4,
+        "rationale": "The dark theme with muted grey text, small controls, and many unexplained terms (UNet, DDIM, quantile, orthogonalization) make it hard going. The opening and takeaway are readable but the middle is demanding."
+      }
+    },
+    "mean_score": 5.57
+  }
+}

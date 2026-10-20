@@ -1,0 +1,62 @@
+{
+  "paper_id": "csbj.2025.01.007_race_detection_saliency",
+  "paper_title": "Interpretability of AI race detection model in medical imaging with saliency methods",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/without_agent/csbj.2025.01.007_race_detection_saliency__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 1,
+    "major_count": 0,
+    "minor_count": 1,
+    "items": [
+      {
+        "html_quote": "A layer-based attribution in TorchRay. Its maps closely resembled Grad-CAM's here, highlighting trachea and lungs.",
+        "paper_evidence": "The paper only lists \"Linear Approximation\" among the eight methods run with TorchRay. It gives no description of how it works. It does say GradCAM and Linear maps are similar and highlight the trachea and lungs (Section 4.4).",
+        "severity": "minor",
+        "explanation": "Describing Linear Approximation as 'layer-based' is not supported by the paper. It is a small unsupported characterization that does not affect the main findings."
+      }
+    ]
+  },
+  "consistency": {
+    "score": 8,
+    "rationale": "The page reproduces the paper's problem, the 'keep/remove' evaluation definition, the data (2,200 images, ResNet34, AUCs), and the atlas and permutation z-score procedure. It also gives the 15% and 30% results with the right numbers (Rise 0.50, GradCAM 0.53, Linear 0.57, original 0.98, Perturbation 40 behavior), the low-frequency/DC-gain preliminary analysis, and the discussion caveats. The numbers match the text, and the synthetic demos are clearly labeled as illustrative. Remaining gaps are minor: the Rise barycenter/dispersion discussion, the paper's note that gradient methods highlight all pixels without ranking importance, and some qualitative details of the atlas figures. The page also lightly paraphrases the real-world-applications claim.",
+    "missing_key_points": [
+      "Rise map reported as dispersed across the image with its barycenter in the middle (Discussion)",
+      "Detail that gradient methods give near-equal importance to all pixels, so thresholding them may bias AUC (only briefly covered)",
+      "Mention that Gichoya et al. also found no anatomical or cofactor proxies for race",
+      "Exact bar-level AUC values from Figs. 6 and 8 (not stated in the paper text, so the page correctly omits them)"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 2,
+        "rationale": "The page has dense text, jargon (AUC, saliency, atlas, z-score) and no pictures a child could relate to. Nothing is suitable for reading aloud to a 5-year-old, apart from the 'keep/remove' toy X-ray demo."
+      },
+      "15": {
+        "score": 6,
+        "rationale": "The interactive keep/remove demo, the z-score slider and the filter widget are engaging, and the saliency-map idea is explained in plain language. AUC, registration and DC gain are still hard for a high-schooler. The overall story does get across."
+      },
+      "25": {
+        "score": 8,
+        "rationale": "The page is well structured, with a clear problem statement, evaluation criterion, method steps, result tables and limitations. The interactive demos aid understanding, and the numbers match the paper. A graduate can easily see what was done and why it matters."
+      },
+      "35": {
+        "score": 8,
+        "rationale": "The headline findings (Rise passes the test, region size matters, low-frequency cues, caution with saliency) are easy to find. The page is accurate and gives enough methodological detail to judge trustworthiness. It is somewhat long for someone who wants a fast takeaway."
+      },
+      "45": {
+        "score": 7,
+        "rationale": "Clear takeaways, a limitations section and practical implications for validating models and caution in clinical use. The technical interludes (DC gain, z-score) are more than a manager needs, but they are skippable."
+      },
+      "55": {
+        "score": 5,
+        "rationale": "Plain-language explanations help, but the dark theme, small muted text and many ML terms (AUC, ResNet34, registration, DC gain) make it harder going for a general reader. The interactive widgets may feel unfamiliar."
+      },
+      "65": {
+        "score": 4,
+        "rationale": "The low-contrast muted gray text on a dark background, small font sizes in several places, and heavy jargon work against readability for an older adult. The clear section structure and real-world relevance (fairness in diagnosis) help somewhat."
+      }
+    },
+    "mean_score": 5.71
+  }
+}

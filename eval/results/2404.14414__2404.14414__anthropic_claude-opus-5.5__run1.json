@@ -1,0 +1,55 @@
+{
+  "paper_id": "2404.14414",
+  "paper_title": "Removing Reflections from RAW Photos",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/without_agent/2404.14414__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 0,
+    "major_count": 0,
+    "minor_count": 0,
+    "items": []
+  },
+  "consistency": {
+    "score": 9,
+    "rationale": "The page accurately conveys the problem (reflections through glass, scarce ground truth), the core idea (photometrically and geometrically accurate simulation from linear RAW, mixing in XYZ before white balance), the optional context photo, the base model and mask-based upsampler, and the results. I checked the numbers against the paper and they match: Tables 1, 2 and 3, the 1.24M/1.08M dataset sizes, the 12,803 RAWs and 2,233 IBLs, the SSIM culling thresholds [0.4, 0.94] and std 0.05, the 2.5M vs 125M parameters, the 4.52 s and 6.53 s timings, the 29% fewer parameters, and the ≈40pp vs ≈20pp comparison. Limitations are covered well: saturation/hole filling, overlapping textures, rare lighting, upsampling failure, 8-bit inputs, and privacy. The interactive toy demos are explicitly labeled as illustrations, not paper results. Small omissions: ground-truth capture SSIM examples such as the per-image SSIM values in Fig. 7 and S6, the details of the white-balance procedure, and the failure caveat about training-data realism are only briefly covered. The comparison to the ground-truth captured photos is also only touched on.",
+    "missing_key_points": [
+      "Quantitative per-image SSIM comparisons against real ground-truth captures (Fig. 7, S6) are not presented",
+      "Details of the C5 white-balancer culling and the Planckian-locus constraint are only briefly mentioned",
+      "The paper's note that the 8-bit comparison models were run on an ACR-converted version of the test set is only lightly stated",
+      "Public datasets lack RAW, so no comparison on standard benchmarks is possible (mentioned, but with little emphasis on the evaluation caveat)"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 2,
+        "rationale": "Dense text, equations, dark theme and heavy jargon (RAW, Fresnel, SSIM). Nothing is aimed at a pre-reader. The toy sliders might hold a child's interest briefly, but the explanation is not accessible."
+      },
+      "15": {
+        "score": 5,
+        "rationale": "Interactive mixing demo, 'light adds' framing and plain-words notes help. But the Fresnel equations, XYZ color space, BiFPN and SSIM tables are too technical, and many terms are undefined for a high-schooler."
+      },
+      "25": {
+        "score": 9,
+        "rationale": "Well structured, accurate, with interactive demos, a pipeline-step explorer, equations with plain-language glosses and interactive results plots. A graduate can understand what was done and why it matters."
+      },
+      "35": {
+        "score": 9,
+        "rationale": "Quick takeaway, key results with numbers, clear contributions, ablations and limitations. Efficient for a professional in a nearby field."
+      },
+      "45": {
+        "score": 8,
+        "rationale": "Covers practical impact (about 5 s previews on phone/laptop, editing, privacy note) and honest limitations, which builds trust. Somewhat heavy on technical detail for a manager."
+      },
+      "55": {
+        "score": 6,
+        "rationale": "The problem section and takeaway are readable. Much of the middle is ML/photo-pipeline jargon and equations, and the dark theme with dense blocks is a strain for a less technical reader."
+      },
+      "65": {
+        "score": 5,
+        "rationale": "The 17px font and clear section structure help, but the dark low-contrast muted text, heavy unexplained jargon and interactive widgets make it hard going. The real-world relevance is clear in the intro."
+      }
+    },
+    "mean_score": 6.29
+  }
+}

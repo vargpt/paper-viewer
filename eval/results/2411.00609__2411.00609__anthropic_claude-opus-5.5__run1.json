@@ -1,0 +1,55 @@
+{
+  "paper_id": "2411.00609",
+  "paper_title": "Tumor Location-weighted MRI-Report Contrastive Learning: A Framework for Improving the Explainability of Pediatric Brain Tumor Diagnosis",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/without_agent/2411.00609__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 0,
+    "major_count": 0,
+    "minor_count": 0,
+    "items": []
+  },
+  "consistency": {
+    "score": 9,
+    "rationale": "The page closely matches the paper on the problem (explainability gap, pLGG genetic markers), the method (global and local triplet CL, location-weighted loss with c=0.5 and m=0.25, semi-hard negative sampling, MedicalNet and Clinical Longformer initialisation, frozen layers), the downstream setup, and the main results. Tables 1-5 and 6, the paired t-test p-values, the 62.1% and 81.1% AUC improvements, and the Dice scores are all reproduced correctly. It also covers limitations: small dataset, low external results, MedicalNet's higher recall, contrastive loss's higher F1, and the zero/few-shot future work. It even flags the paper's internal inconsistencies (400 vs 340 epochs, 31.1% vs 33.1% Dice). Omissions are minor: the StepLR warm-up, the paper's original figures, the training-data availability statement, and the dataset-choice rationale only briefly. The interactive toys are labelled as illustrations and don't misstate the paper. I found no unsupported claims.",
+    "missing_key_points": [
+      "Original Figures 1-3 (framework diagram, classifier architecture, example attention heatmaps) are not reproduced; Figure 3 is only described",
+      "StepLR 10-epoch warm-up not mentioned",
+      "Data availability statement and ethics details only briefly covered",
+      "Full hyperparameter tuning grids not listed"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 2,
+        "rationale": "The page relies on technical vocabulary (embeddings, cosine distance, triplet loss, AUC) and dense text. There are no simple pictures or very short sentences. The interactive toys are not meaningful to a pre-reader."
+      },
+      "15": {
+        "score": 6,
+        "rationale": "The scan-and-report matching idea is clear and the interactive demos (loss calculator, Dice toy, sampling cartoon) help. However, the equations, jargon and density are heavy for a high-schooler, and many terms are only partly defined."
+      },
+      "25": {
+        "score": 9,
+        "rationale": "A graduate reader gets a precise, well-structured walk-through with equations, a click-through architecture diagram, results charts, ablations, significance tests and honest limitations. Terms are defined and the interactives reinforce the ideas."
+      },
+      "35": {
+        "score": 9,
+        "rationale": "There is a quick TL;DR with headline numbers, clear sections, and the caveats experts want (small data, external drop, recall trade-off, threshold dependence). It is easy to scan and trustworthy."
+      },
+      "45": {
+        "score": 8,
+        "rationale": "The practical value (trust, non-invasive diagnosis, handling data shift) and the limitations are stated clearly. Some mid-sections on loss mechanics are more technical than a manager needs, but the summary and 'why it matters' cover it."
+      },
+      "55": {
+        "score": 6,
+        "rationale": "The TL;DR and problem sections are readable in plain language. The later sections have heavy jargon and math, and the interactive controls may be unfamiliar. The reader gets the gist with effort."
+      },
+      "65": {
+        "score": 6,
+        "rationale": "The page is well organised and uses a readable 18px font with good contrast and sticky navigation. The unexplained ML jargon in the middle sections and the reliance on interactive widgets make it demanding, though the summary and limitations are clear."
+      }
+    },
+    "mean_score": 6.57
+  }
+}

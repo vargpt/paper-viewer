@@ -1,0 +1,55 @@
+{
+  "paper_id": "2504.06075",
+  "paper_title": "Collaborative Prediction: Tractable Information Aggregation via Agreement",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/without_agent/2504.06075__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 0,
+    "major_count": 0,
+    "minor_count": 0,
+    "items": []
+  },
+  "consistency": {
+    "score": 9,
+    "rationale": "The page covers the problem (parties with different, possibly illegible features), the Aumann/agreement background and the XOR footnote, and the protocol (K rounds, label predictions only). It also covers conversation swap regret, the weak learning condition with w(γ)=γ²/(16C²), the boosting Theorem 3.3 and the Section 4 chain of Theorems 4.1–4.3. The results are accurate: Theorem 4.6, the linear case with K=T^{3/28} and T^{55/56}, the decision extension (Theorem 5.21), the batch setting (R=m², 2w⁻¹(3/m), the m⁷ sample bound) and the Bayesian lift (K^{-1/3} and K^{-1/6}). The lower bounds (Theorems 8.1, 8.2, 8.6, Lemma 8.4, Corollary 8.5, 3.7, 3.8, A.1) are stated correctly. Limitations are given honestly: honest participants, restricted function classes, slow worst-case rates, and no experiments. The interactive demo is clearly labelled as a simplified illustration rather than a result from the paper. I found no unsupported or contradicted claims. The omissions are minor: detailed regret expressions, the generalization proof details, the Bayesian swap-regret machinery (fat shattering), and the related-work discussion on vertical federated learning and co-training.",
+    "missing_key_points": [
+      "Detailed Theorem 4.6 regret expression and parameter tradeoffs, beyond the high-level statement",
+      "Discretization/rounding details and the fat-shattering condition behind the Bayesian lift",
+      "Related-work contrasts (vertical federated learning with cryptography, co-training, late versus early fusion)",
+      "Technical definitions of decision calibration and cross-calibration are only summarized"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 2,
+        "rationale": "The page is dense with math and jargon (swap regret, Minkowski sum). The only child-friendly parts are the bit-clicking XOR toy and the chat bubbles, and these are not explained at a child's level."
+      },
+      "15": {
+        "score": 4,
+        "rationale": "The Alice and Bob framing, the XOR toy and the chat demo are engaging. Most of the page (regret definitions, theorems, weak learning) is too abstract for a high-schooler, so they grasp only the 'two halves of the story' idea."
+      },
+      "25": {
+        "score": 8,
+        "rationale": "A technically capable graduate gets accurate definitions with plain-language glosses, proof intuitions, interactive demos and a clear mapping to theorems. It is faithful and well structured, with only a few dense spots."
+      },
+      "35": {
+        "score": 8,
+        "rationale": "Takeaways are quick to find: the key-idea section, the bottom-line callout, the results tabs and the lower-bound tabs. The ingredients are named precisely and the limitations are candid, which suits an expert in an adjacent field."
+      },
+      "45": {
+        "score": 7,
+        "rationale": "The practical motivations (human+AI, legal constraints, multi-modal) and the honest limitations (no experiments, honest-participants assumption, slow rates) help. The heavy theory is still dense for a manager, though the callouts and bottom line help."
+      },
+      "55": {
+        "score": 5,
+        "rationale": "The prose is readable, with plain-language notes and the XOR example. The unexplained terms (regret, calibration, Bayesian, boosting) and the many equations make it hard going for a general reader."
+      },
+      "65": {
+        "score": 5,
+        "rationale": "The layout is clear, with a sticky nav and a readable 17px serif. Some text is small and the jargon load is high, and the interactive plots may be awkward to use. Sections give structure, but many terms stay unexplained."
+      }
+    },
+    "mean_score": 5.57
+  }
+}

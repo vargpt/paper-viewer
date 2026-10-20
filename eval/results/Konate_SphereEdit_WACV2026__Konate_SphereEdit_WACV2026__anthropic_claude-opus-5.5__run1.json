@@ -1,0 +1,55 @@
+{
+  "paper_id": "Konate_SphereEdit_WACV2026",
+  "paper_title": "SphereEdit: Spherical Semantic Editing in Diffusion Models",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/without_agent/Konate_SphereEdit_WACV2026__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 0,
+    "major_count": 0,
+    "minor_count": 0,
+    "items": []
+  },
+  "consistency": {
+    "score": 8,
+    "rationale": "The page follows the paper closely. The problem (edit leakage, identity drift, entanglement) matches the paper. The method is accurate: v_k from the difference between the attribute-conditioned and null-conditioned predictions, unit normalisation, cross-attention masks thresholded at quantile q, overlap-only masked Gram–Schmidt, spherical coefficients (Eq. 4), the sum, and the DDIM update. The setup is correct (SD v1.5, 50 steps, q=0.8, θ=φ=π/2, seed 0, ~12 s on an L40). Table 1 values and the textual claims about it are reproduced correctly, including SEGA being ahead on LPIPS for Glasses+Mustache and TurboEdit leading CLIP-T by 0.0012 for Eyebrow+Lipstick. Both ablations (antipodal ±7.5; masking thresholds) and both stated limitations are covered. Toy visuals are clearly labelled as illustrations, and the page notes the Figure 5 caption/text ambiguity about q. Omissions are minor: the contributions list, the related-work positioning, the fact that the evidence is largely qualitative and on a small benchmark with no user study, and the unexplained default θ=φ=π/2 setting. The page does flag that the quantitative evaluation is limited.",
+    "missing_key_points": [
+      "Explicit contributions list (1D antipodal, 2D angular, 3D spherical composition)",
+      "Related-work context and the specific baseline descriptions (TurboEdit, Cycle Diffusion, InstructPix2Pix, etc.)",
+      "No statistical significance or user study; quantitative evidence covers only two edits on 100 images",
+      "Unusual default θ=φ=π/2 (which would give λ1=0) is not discussed or questioned"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 2,
+        "rationale": "Dark, text-heavy page full of jargon (UNet, latent, orthogonalization). The toy face and sliders are playful, but there are no simple sentences or concrete everyday analogies, and a young child could not follow it."
+      },
+      "15": {
+        "score": 5,
+        "rationale": "The interactive circle, sphere and mask toys help build intuition, and 'knobs on a sphere' is approachable. Equations and terms like cross-attention, Gram–Schmidt, DDIM and quantile are mostly beyond a high-schooler."
+      },
+      "25": {
+        "score": 8,
+        "rationale": "Clear structure, plain-language glosses under each equation, faithful numbers, and interactive demos of angles, masks and orthogonalization. A technical graduate would come away understanding what was done and why."
+      },
+      "35": {
+        "score": 8,
+        "rationale": "Fast takeaway with a stepper, algorithm box, results table/chart and an honest limitations section. The toy demos are labelled, and a professional can quickly judge the contribution."
+      },
+      "45": {
+        "score": 7,
+        "rationale": "The practical value (training-free, plug-and-play, ~12 s per edit) and trustworthiness caveats are clear. Much of the page is technical depth that a manager may skim, though the takeaway and limitations sections help."
+      },
+      "55": {
+        "score": 5,
+        "rationale": "Plain-language glosses help, but heavy ML vocabulary and equations remain, and the dark, dense interface with small text is demanding. A general reader gets the gist with effort."
+      },
+      "65": {
+        "score": 5,
+        "rationale": "Well structured with clear section headings, but small fonts (0.8–0.9rem) on a dark theme, many unexplained terms, and interaction-dependent content reduce accessibility. The limitations and takeaway are readable."
+      }
+    },
+    "mean_score": 5.71
+  }
+}

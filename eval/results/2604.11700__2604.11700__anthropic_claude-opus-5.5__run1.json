@@ -1,0 +1,69 @@
+{
+  "paper_id": "2604.11700",
+  "paper_title": "Exploring Radiologists' Expectations of Explainable Machine Learning Models in Medical Image Analysis",
+  "html_path": "/project/6101813/sketabi/paper-viewer/baseline/outputs/without_agent/2604.11700__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 2,
+    "major_count": 0,
+    "minor_count": 2,
+    "items": [
+      {
+        "html_quote": "Participants came from hospitals in a single metropolitan area, through one university radiology department.</li>\n      <li>Survey data and analysis code are stated to be released upon acceptance.",
+        "paper_evidence": "The Discussion lists three limitations: a low number of participants, insufficient questions on trust, and model confidence not treated as an explainability tool. The single metropolitan area/university distribution appears only in Methods/Participants, and the data-release note appears only in the front matter. Neither is presented as a limitation.",
+        "severity": "minor",
+        "explanation": "Both items sit under the heading 'Limitations (as stated by the authors)', which wrongly attributes them to the authors as stated limitations."
+      },
+      {
+        "html_quote": "That’s the most common reaction: 16 residents and 10 seniors would analyse the model’s explanations.",
+        "paper_evidence": "Section 4.3 says most participants would seek additional information, and that 16 residents and 10 senior radiologists would analyze the model's explanations (Figure 15). It does not say this was the single most common reaction compared with the other options.",
+        "severity": "minor",
+        "explanation": "The ranking claim ('the most common reaction') is not stated in the paper text. It is an inference from partial numbers."
+      }
+    ]
+  },
+  "consistency": {
+    "score": 8,
+    "rationale": "The page accurately covers the problem, survey design (46 participants, 30 questions, 9 sections, 28/2 split, ~20 min), demographics, and the main results. These include 43/46 interested, the tasks selected, 96% imaging features, the resident vs senior percentages, SRTCS 86% vs 0%, 42/46 on trust, 86% vs 45% on bias, the 50% unsure, the validation percentages (78/74/70/64/65), the four-stage guidelines, the four evaluation metrics, and the real limitations. The numbers I checked match the paper. Weaknesses are two minor misattributions and some omissions: the paper's own stated limitations are blended with other facts, and the 'first radiologist-centred multi-modality study' claim is reported correctly as the authors' own claim. The page also adds invented toy demos, but flags them as illustrative.",
+    "missing_key_points": [
+      "The IRB/Quality Improvement approval is not discussed (the paper itself defers IRB details)",
+      "Related-work user studies are only briefly mentioned (e.g. Tonekaboni, CheXplain, Jin, Gulum details)",
+      "Figure 1/Figure 5/Figure 17 details beyond the quoted percentages are not shown",
+      "Radiologists' preference for model confidence as a possible explainability tool is only touched on briefly",
+      "The explicit caution that Section 4.4 findings (e.g. accepting non-explainable models) are 'unexpected' and warrant further study is only partly conveyed"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 2,
+        "rationale": "There are no pictures or simple stories, and the text is dense with terms like radiologist, explainability, and post-hoc. Only the toy canvas demos are visual. A pre-reader would not follow it."
+      },
+      "15": {
+        "score": 6,
+        "rationale": "The interactive cards, quiz, and sliders are engaging, and the problem is clearly framed. Terms like fidelity, SRTCS, and hyperparameters are only partly defined and the page is long, so a teenager would get the gist with effort."
+      },
+      "25": {
+        "score": 8,
+        "rationale": "It is well structured, with a clear problem, method, results, guidelines, and limitations. The charts are accurate, the terms are defined in context, and the resident vs senior toggle is useful. The illustrative demos are labelled as not from the paper."
+      },
+      "35": {
+        "score": 8,
+        "rationale": "Key takeaways are easy to find: the stat tiles, the callouts, and the comparison charts. The guidelines and metrics are summarized in a usable way. A professional can get the main message quickly."
+      },
+      "45": {
+        "score": 8,
+        "rationale": "It covers practical implications such as PACS integration, validation expectations, and bias concerns. It is clear about the small sample and the limitations, which supports trust. The deployment chart is useful for decision makers."
+      },
+      "55": {
+        "score": 6,
+        "rationale": "The text is a readable size and structured, but it carries a lot of ML jargon (Grad-CAM, prototypes, counterfactuals, fidelity, hyperparameters). Some of it is explained only briefly. The interactive elements may be unfamiliar to some readers."
+      },
+      "65": {
+        "score": 6,
+        "rationale": "The font is large with clear sections and navigation, and the real-world meaning is explained. However, the page is long and jargon-heavy, with many clickable interactions and charts, which could overwhelm some older readers."
+      }
+    },
+    "mean_score": 6.29
+  }
+}
