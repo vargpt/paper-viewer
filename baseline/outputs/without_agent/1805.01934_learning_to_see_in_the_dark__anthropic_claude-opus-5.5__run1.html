@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning to See in the Dark: An Interactive Explainer</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0d14; --panel:#141824; --panel2:#1b2030; --ink:#e7e9f0; --muted:#9aa3b8;
+    --accent:#ffcc66; --accent2:#6ec6ff; --good:#7be0a2; --bad:#ff7b7b; --line:#2a3145;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif}
+  header{padding:80px 20px 60px;text-align:center;background:radial-gradient(ellipse at 50% 0%,#2a2340 0%,#0b0d14 70%)}
+  header h1{font-size:clamp(2rem,5vw,3.4rem);margin:0 0 10px;letter-spacing:-.5px}
+  header h1 span{color:var(--accent)}
+  header .authors{color:var(--muted);font-size:.95rem}
+  header .tag{max-width:720px;margin:24px auto 0;font-size:1.15rem;color:#cfd5e4}
+  nav{position:sticky;top:0;z-index:10;background:rgba(11,13,20,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:8px}
+  nav a{color:var(--muted);text-decoration:none;font-size:.88rem;padding:4px 10px;border-radius:6px}
+  nav a:hover{color:var(--ink);background:var(--panel2)}
+  main{max-width:980px;margin:0 auto;padding:20px}
+  section{margin:56px 0}
+  h2{font-size:1.8rem;margin:0 0 14px;border-left:4px solid var(--accent);padding-left:12px}
+  h3{color:var(--accent2);margin:26px 0 8px}
+  p{margin:10px 0}
+  .muted{color:var(--muted)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:18px 0}
+  .note{font-size:.85rem;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin-top:10px}
+  .callout{background:linear-gradient(90deg,#2a2340,#141824);border:1px solid #3d3460;border-radius:12px;padding:16px 20px;margin:18px 0}
+  .eq{font-family:"Cambria Math",Georgia,serif;font-size:1.25rem;text-align:center;background:var(--panel2);padding:14px;border-radius:8px;margin:12px 0;letter-spacing:.5px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  canvas{width:100%;image-rendering:pixelated;border-radius:8px;background:#000;display:block}
+  label{font-size:.92rem;color:var(--muted)}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .ctrl{margin:10px 0}
+  .ctrl b{color:var(--ink)}
+  button,.tbtn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.9rem;margin:3px}
+  button:hover{border-color:var(--accent)}
+  button.on{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:600}
+  .caption{font-size:.85rem;color:var(--muted);text-align:center;margin-top:6px}
+  table{border-collapse:collapse;width:100%;font-size:.93rem}
+  th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left}
+  th{color:var(--accent2);font-weight:600}
+  .pipe{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0}
+  .stage{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:.88rem;transition:.15s}
+  .stage:hover,.stage.sel{border-color:var(--accent);color:var(--accent)}
+  .arrow{color:var(--muted)}
+  .stage.net{background:#2a2340;border-color:#6c5ba8}
+  #stageInfo{min-height:60px}
+  .stat{display:inline-block;background:var(--panel2);border-radius:10px;padding:12px 16px;margin:6px;text-align:center;min-width:140px}
+  .stat .n{font-size:1.6rem;font-weight:700;color:var(--accent)}
+  .stat .l{font-size:.8rem;color:var(--muted)}
+  ul li{margin:6px 0}
+  .lim{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .lim div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .lim b{color:var(--bad)}
+  footer{text-align:center;color:var(--muted);font-size:.85rem;padding:40px 20px;border-top:1px solid var(--line)}
+  .plot{width:100%;min-height:340px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Learning to <span>See in the Dark</span></h1>
+  <div class="authors">Chen Chen (UIUC) · Qifeng Chen, Jia Xu, Vladlen Koltun (Intel Labs) · arXiv:1805.01934</div>
+  <p class="tag">A camera pointed into a room lit by less than 0.1 lux, shooting at 1/30 of a second, records an almost-black image. This paper trains a neural network to turn that raw, nearly-black sensor data into a clean, correctly-colored photo.</p>
+</header>
+
+<nav>
+  <a href="#problem">Problem</a><a href="#sim">Noise lab</a><a href="#dataset">Dataset</a><a href="#method">Method</a><a href="#packing">Raw packing</a><a href="#training">Training</a><a href="#results">Results</a><a href="#ablations">What matters</a><a href="#limits">Limitations</a>
+</nav>
+
+<main>
+
+<section id="problem">
+  <h2>1. The problem: too few photons</h2>
+  <p>Every photo is made of photons, the particles of light that land on the sensor. In bright daylight there are plenty of them. On a moonlit street or in a dark room with a fast shutter, only a handful reach each pixel. The image that comes out is then mostly <b>noise</b>: random grain and blotches with no relation to the scene.</p>
+  <p>The usual remedies all have a cost:</p>
+  <ul>
+    <li><b>Raise the ISO (gain).</b> The image gets brighter, but the noise is amplified by exactly the same amount.</li>
+    <li><b>Brighten afterwards</b> (scaling, histogram stretching). The same issue applies. It does not fix the low <i>signal-to-noise ratio</i> (SNR).</li>
+    <li><b>Expose for longer.</b> More light comes in, but camera shake and moving objects cause blur. It is also impossible at video rates.</li>
+    <li><b>Use a flash or a wider aperture.</b> These are physical fixes, and each has its own drawbacks.</li>
+    <li><b>Take a burst of frames and merge them.</b> Alignment can fail in extreme darkness, and burst pipelines are not designed for video (they rely on "lucky imaging," which means picking the best frame).</li>
+  </ul>
+  <div class="callout">
+    <b>The paper's Figure 1 setting:</b> a Sony α7S II, a dark indoor room, illuminance below 0.1 lux, 1/30 s exposure, f/5.6.
+    At <b>ISO 8,000</b> the camera's image is essentially black. At <b>ISO 409,600</b>, far beyond most cameras, the scene becomes visible but is dim, noisy, and color-shifted.
+    The paper's network, applied to the <i>raw data of the ISO 8,000 shot</i>, produces a clean, well-colored image.
+  </div>
+  <p>The authors' bet is that the <b>traditional camera processing pipeline breaks down</b> in this regime. They replace it with a single network that is trained end-to-end and reads the sensor's raw data directly.</p>
+</section>
+
+<section id="sim">
+  <h2>2. Interactive: why brightening a dark photo doesn't work</h2>
+  <p>Photon arrival is random. If a pixel expects <i>N</i> photons, the actual count fluctuates by about √<i>N</i>. The sensor's electronics also add a fixed amount of "read noise." Putting these together gives the signal-to-noise ratio:</p>
+  <div class="eq">SNR ≈ N / √( N + r² )</div>
+  <p class="muted">In words: signal grows like <i>N</i> but noise grows only like √<i>N</i>, so more photons means a cleaner image. Multiplying the image by a gain afterwards scales the signal <i>and</i> the noise together, so the ratio between them does not change.</p>
+
+  <div class="panel">
+    <div class="grid2">
+      <div>
+        <canvas id="simShort" width="240" height="160"></canvas>
+        <div class="caption">Short exposure, brightened by the exposure ratio</div>
+      </div>
+      <div>
+        <canvas id="simLong" width="240" height="160"></canvas>
+        <div class="caption">Long exposure (the "reference")</div>
+      </div>
+    </div>
+    <div class="ctrl"><label>Photons reaching a white pixel during the short exposure: <b id="lv">4</b></label>
+      <input type="range" id="light" min="0.3" max="60" step="0.1" value="4"></div>
+    <div class="ctrl"><label>Long/short exposure ratio: <b id="rv">x100</b></label>
+      <input type="range" id="ratio" min="0" max="2" step="1" value="0"></div>
+    <div class="ctrl"><label>Read noise r (electrons): <b id="nv">2</b></label>
+      <input type="range" id="readn" min="0" max="8" step="0.5" value="2"></div>
+    <button id="resim">Re-roll noise</button>
+    <div id="snrPlot" class="plot" style="min-height:280px"></div>
+    <p class="note">This is a toy simulation made for this page (Poisson photon noise plus Gaussian read noise on a synthetic scene). It is <b>not</b> data from the paper. It illustrates the physics behind the paper's dataset design: the reference images use 100 to 300 times longer exposure, so they collect 100 to 300 times more photons.</p>
+  </div>
+</section>
+
+<section id="dataset">
+  <h2>3. The See-in-the-Dark (SID) dataset</h2>
+  <p>Before this paper, the authors found no public dataset of <b>raw, fast, extreme low-light images with ground truth</b>. Existing collections fell short in different ways. Most denoising benchmarks use synthetic noise. RENOIR has misaligned pairs. Google HDR+ is mostly daytime. The Darmstadt Noise Dataset was also captured during the day. So the authors built their own dataset.</p>
+  <div style="text-align:center">
+    <div class="stat"><div class="n">5094</div><div class="l">raw short-exposure images</div></div>
+    <div class="stat"><div class="n">424</div><div class="l">distinct long-exposure references</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">cameras (Sony Bayer, Fuji X-Trans)</div></div>
+    <div class="stat"><div class="n">100–300×</div><div class="l">longer exposure for reference</div></div>
+  </div>
+  <h3>How it was captured</h3>
+  <ul>
+    <li><b>Cameras:</b> Sony α7S II (full-frame Bayer sensor, 4240×2832) and Fujifilm X-T2 (APS-C X-Trans sensor, 6000×4000). Mirrorless bodies were used so that no mirror flap could cause vibration.</li>
+    <li><b>Setup:</b> the cameras sat on sturdy tripods. Settings were tuned for the best long-exposure reference (10–30 s). A remote smartphone app then cut the exposure 100–300× for a sequence of short shots (1/30–1/10 s), and nobody touched the camera in between.</li>
+    <li><b>Lighting:</b> outdoor scenes were shot at night under moonlight or street lights, at 0.2–5 lux. Indoor scenes were even darker, at 0.03–0.3 lux, in closed rooms with faint indirect light.</li>
+    <li><b>Splits:</b> about 20% of each condition is held out for testing and 10% for validation.</li>
+    <li>Because of the long reference exposures, <b>all scenes are static</b>.</li>
+  </ul>
+  <div class="panel">
+    <div style="text-align:center">
+      <button class="dsbtn on" data-cam="both">Both cameras</button>
+      <button class="dsbtn" data-cam="sony">Sony α7S II</button>
+      <button class="dsbtn" data-cam="fuji">Fujifilm X-T2</button>
+    </div>
+    <div id="dsPlot" class="plot"></div>
+    <table id="dsTable"></table>
+  </div>
+</section>
+
+<section id="method">
+  <h2>4. The method: replace the pipeline with one network</h2>
+  <p>A normal camera turns raw sensor readings into a JPEG through a long chain of hand-tuned steps. Each step is tuned for normal light. In extreme darkness, every step amplifies noise and passes its errors on to the next. Click the stages below to compare the approaches.</p>
+
+  <div class="panel">
+    <div style="text-align:center;margin-bottom:8px">
+      <button class="pbtn on" data-p="trad">Traditional</button>
+      <button class="pbtn" data-p="l3">L3 pipeline</button>
+      <button class="pbtn" data-p="burst">Burst pipeline</button>
+      <button class="pbtn" data-p="ours">This paper</button>
+    </div>
+    <div id="pipe" class="pipe"></div>
+    <div id="stageInfo" class="panel" style="background:var(--panel2);margin:8px 0 0"></div>
+  </div>
+
+  <h3>The paper's pipeline, step by step</h3>
+  <ol>
+    <li><b>Pack</b> the raw mosaic into channels. Bayer data becomes 4 channels at half width and half height. X-Trans data becomes 9 channels.</li>
+    <li><b>Subtract the black level</b>, which is the sensor's baseline reading when no light hits it.</li>
+    <li><b>Multiply by the amplification ratio</b> (e.g. ×100 or ×300). This plays the same role as the camera's ISO knob.</li>
+    <li>Feed the result into a <b>fully-convolutional network</b>. The default is a <b>U-net</b>.</li>
+    <li>The network outputs <b>12 channels at half resolution</b>. A <b>sub-pixel layer</b> rearranges each group of 12 values into a 2×2 block of RGB pixels, which restores full resolution. The output is directly in sRGB.</li>
+  </ol>
+  <div class="eq">input = ( raw − black level ) × amplification ratio</div>
+  <p class="muted">In words: remove the sensor's "zero offset," then scale up so the network knows how bright the final image should be. Everything else (demosaicing, color, denoising) is left to the network to learn.</p>
+
+  <h3>Interactive: the amplification ratio works like ISO</h3>
+  <p>The user sets the ratio, and the network then produces a brighter or darker output. The paper's Figure 4 shows one indoor patch at ×28, ×87, ×189 and ×366. The slider below illustrates only the brightness effect, using a synthetic scene.</p>
+  <div class="panel">
+    <canvas id="ampCanvas" width="300" height="140"></canvas>
+    <div class="ctrl"><label>Amplification ratio: <b id="av">x189</b></label>
+      <input type="range" id="amp" min="28" max="366" step="1" value="189"></div>
+    <div style="text-align:center">
+      <button class="ampPreset" data-v="28">x28</button><button class="ampPreset" data-v="87">x87</button><button class="ampPreset" data-v="189">x189</button><button class="ampPreset" data-v="366">x366</button>
+    </div>
+    <p class="note">This is an illustration of brightness scaling only, not the network's actual output. Note that very high ratios saturate bright regions. The paper notes it does not address HDR tone mapping.</p>
+  </div>
+
+  <h3>Why these architectures?</h3>
+  <ul>
+    <li>Two fully-convolutional designs were explored: a <b>multi-scale context aggregation network (CAN)</b> and a <b>U-net</b>. The U-net is the default.</li>
+    <li><b>Residual connections</b>, popular in denoising, did not help here. The authors suggest this may be because the input (raw) and output (sRGB) live in different color spaces.</li>
+    <li><b>Memory:</b> the chosen networks can process a full-resolution image (up to 6000×4000) in GPU memory. This avoids fully-connected layers that would require cutting the image into patches and stitching them back together.</li>
+  </ul>
+</section>
+
+<section id="packing">
+  <h2>5. Interactive: how raw data is fed to the network</h2>
+  <p>A color sensor doesn't see full color at each pixel. Each pixel sits behind a tiny red, green, or blue filter. In a <b>Bayer</b> pattern these repeat in 2×2 tiles (R, G, G, B). All the readings come out as one single-channel mosaic. The question is how to hand this to a neural network.</p>
+  <div class="panel">
+    <div style="text-align:center">
+      <button class="pkbtn on" data-m="raw">Raw mosaic</button>
+      <button class="pkbtn" data-m="pack">Packed (paper's default)</button>
+      <button class="pkbtn" data-m="mask">Masked (alternative)</button>
+    </div>
+    <canvas id="pkCanvas" width="640" height="220" style="max-width:640px;margin:10px auto"></canvas>
+    <div id="pkText" class="muted" style="text-align:center"></div>
+  </div>
+  <p><b>X-Trans</b> (Fuji) uses a more complicated 6×6 repeating pattern. Packing it naively gives 36 channels. Instead, the authors swap some neighboring values to create a 3×3 pattern, which packs into just <b>9 channels</b>. Section 8 shows that this choice matters.</p>
+</section>
+
+<section id="training">
+  <h2>6. Training</h2>
+  <div class="grid2">
+    <div class="panel">
+      <h3 style="margin-top:0">The recipe</h3>
+      <ul>
+        <li>Trained <b>from scratch</b>, with <b>one network per camera</b>.</li>
+        <li>Input: raw short-exposure data. Target: the long-exposure image converted to sRGB by <i>libraw</i>.</li>
+        <li>Amplification ratio = the exposure ratio (×100, ×250 or ×300), used for both training and testing.</li>
+        <li>Random 512×512 crops, with random flips and rotations.</li>
+        <li>Adam optimizer. Learning rate 10⁻⁴, dropped to 10⁻⁵ after 2000 epochs. Training runs for 4000 epochs.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">The loss: L1</h3>
+      <div class="eq">L1 = mean | output − reference |</div>
+      <p class="muted">In words: for every pixel and color, measure how far the network's value is from the long-exposure reference, ignoring the sign, and average. Training nudges the network to make this number smaller.</p>
+      <p>The authors also tried L2 (squared error), an SSIM loss, an added total-variation loss, and an added GAN loss. L2 and SSIM gave comparable results with no systematic perceptual benefit. TV did not help, and the GAN loss <b>significantly reduced</b> accuracy.</p>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <h2>7. Results: what do people prefer?</h2>
+  <p>The comparison uses two strong baselines, each <b>given unfair help</b>:</p>
+  <ul>
+    <li><b>BM3D:</b> the traditional pipeline followed by BM3D denoising. A careful study of real-world noise had found BM3D outperforming newer methods. BM3D needs a noise level as input. Set it low and noise remains; set it high and the image gets over-smoothed. Both problems can appear in the same image, because real low-light noise is not uniform. BM3D also does nothing about color distortion.</li>
+    <li><b>Burst:</b> the per-pixel median of <b>8 images that are already perfectly aligned</b>. This is an idealized burst pipeline, since real bursts would need alignment.</li>
+    <li>Both baselines were also given the reference image's <b>white balance</b> and had each color channel <b>scaled to the reference's mean</b>. The authors call this "privileged information."</li>
+  </ul>
+  <p>In blind, randomized A/B tests on Amazon Mechanical Turk, 10 workers made <b>1180 comparisons</b> in total. Each time they picked the higher-quality image from a pair without knowing where each image came from.</p>
+  <div class="panel">
+    <div style="text-align:center">
+      <button class="ptb on" data-s="x300">Sony x300 (challenging)</button>
+      <button class="ptb" data-s="x100">Sony x100 (easier)</button>
+    </div>
+    <div id="percPlot" class="plot"></div>
+    <p class="note">The bars show how often workers chose the paper's image over the baseline. 50% (dashed line) would mean no preference. On the hard ×300 set the network wins clearly. On the easier ×100 set it is "on par" with the baselines (59.3% vs BM3D, 47.3% vs the 8-frame perfectly aligned burst).</p>
+  </div>
+
+  <h3>A surprise: it transfers to an iPhone</h3>
+  <p>A model trained only on the <b>Sony</b> subset was applied to raw images from an <b>iPhone 6s</b>, which also has a Bayer sensor and 14-bit raw data (night shot, ISO 400, f/2.2, 0.05 s, ratio ×100). The traditional pipeline gave severe noise and color shift. The network's output had good contrast, low noise, and well-adjusted color. This is one representative qualitative example, which the authors call "preliminary" but "encouraging."</p>
+</section>
+
+<section id="ablations">
+  <h2>8. What matters? Controlled experiments</h2>
+  <p>The authors changed one ingredient at a time and measured the effect on the test set with two standard metrics:</p>
+  <ul>
+    <li><b>PSNR</b> (Peak Signal-to-Noise Ratio, in dB) measures pixel-level closeness to the reference. Higher is better, and each +3 dB roughly halves the squared error.</li>
+    <li><b>SSIM</b> (Structural Similarity, from 0 to 1) measures how well local structure such as edges and textures is preserved. Higher is better.</li>
+  </ul>
+  <div class="panel">
+    <div style="text-align:center">
+      <button class="abm on" data-m="psnr">PSNR</button>
+      <button class="abm" data-m="ssim">SSIM</button>
+      &nbsp;|&nbsp;
+      <button class="abc on" data-c="Sony">Sony</button>
+      <button class="abc" data-c="Fuji">Fuji</button>
+    </div>
+    <div id="abPlot" class="plot" style="min-height:400px"></div>
+    <div id="abNote" class="note"></div>
+  </div>
+  <h3>Takeaways</h3>
+  <ul>
+    <li><b>Raw input is crucial.</b> Feeding the network sRGB images from the traditional pipeline drops Sony PSNR from 28.88 to 17.40.</li>
+    <li><b>U-net vs CAN:</b> the U-net has higher PSNR on both cameras. CAN has slightly higher SSIM but sometimes loses color (Figure 8, Fuji ×300 patch).</li>
+    <li><b>Loss choice barely matters</b> between L1, L2 and SSIM.</li>
+    <li><b>Packing beats masking</b> for Bayer data. Masking tends to lose some hues.</li>
+    <li><b>The 3×3 X-Trans trick matters:</b> 6×6 (36-channel) packing loses color and detail (Fuji 26.61 → 23.05 dB).</li>
+    <li><b>Don't make the network learn histogram stretching.</b> When reference images were histogram-stretched, accuracy collapsed (Sony 18.23 dB) and artifacts appeared on walls. The network seems poor at modeling global image statistics and overfits. The authors therefore train without stretching and optionally apply it afterwards, which gives a darker but cleaner result.</li>
+  </ul>
+</section>
+
+<section id="limits">
+  <h2>9. Limitations and open questions</h2>
+  <p>The authors are candid that this is a starting point:</p>
+  <div class="lim">
+    <div><b>Imperfect results</b><br>Output still has artifacts, and ×300 is especially hard. In one 0.2-lux indoor scene (Figure 10), every method struggles: the 8-frame burst is still bad, and the network's output loses detail on close inspection.</div>
+    <div><b>No HDR tone mapping</b><br>Bright regions can saturate (visible in Figure 1c).</div>
+    <div><b>Static scenes only</b><br>Long reference exposures mean SID contains no humans and no moving objects.</div>
+    <div><b>Manual amplification</b><br>The ratio must be chosen externally. An "Auto ISO" that infers it from the input would be useful.</div>
+    <div><b>One network per sensor</b><br>A dedicated network is assumed for each camera. Cross-sensor generalization (e.g. the iPhone test) looks encouraging but needs more study.</div>
+    <div><b>Speed</b><br>A full-resolution image takes 0.38 s (Sony) and 0.66 s (Fuji). That is not real-time at full resolution, although a low-resolution preview can run in real time.</div>
+  </div>
+  <div class="callout" style="margin-top:20px">
+    <b>Bottom line:</b> a single fully-convolutional network trained end-to-end on raw sensor data can replace the traditional camera pipeline in extreme low light. It amplifies images up to 300× with successful noise reduction and correct color. The paper's lasting contribution is twofold: the method, and the <b>SID dataset</b>, which makes this kind of research reproducible.
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Interactive explainer of "Learning to See in the Dark" (Chen, Chen, Xu, Koltun, 2018). Simulations on this page are illustrative toys; all numbers in charts and tables come from the paper.
+</footer>
+
+<script>
+/* ---------- synthetic scene ---------- */
+function makeScene(w,h){
+  const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+  let grd=g.createLinearGradient(0,0,0,h);grd.addColorStop(0,'#6a7a99');grd.addColorStop(1,'#3a3328');
+  g.fillStyle=grd;g.fillRect(0,0,w,h);
+  g.fillStyle='#5a4632';g.fillRect(0,h*0.68,w,h*0.32);
+  g.fillStyle='#d8d2c4';g.fillRect(w*0.08,h*0.15,w*0.25,h*0.4);
+  g.fillStyle='#283a5c';g.fillRect(w*0.1,h*0.18,w*0.21,h*0.34);
+  g.fillStyle='#e04a3a';g.beginPath();g.arc(w*0.5,h*0.62,h*0.15,0,Math.PI*2);g.fill();
+  g.fillStyle='#3fae5a';g.fillRect(w*0.62,h*0.4,w*0.12,h*0.36);
+  g.fillStyle='#f2d24a';g.beginPath();g.moveTo(w*0.82,h*0.76);g.lineTo(w*0.92,h*0.3);g.lineTo(w*0.98,h*0.76);g.fill();
+  g.fillStyle='#ffffff';g.font='bold '+Math.round(h*0.13)+'px sans-serif';g.fillText('SID',w*0.38,h*0.3);
+  g.strokeStyle='#111';g.lineWidth=2;for(let i=0;i<6;i++){g.beginPath();g.moveTo(w*0.62+i*w*0.02,h*0.4);g.lineTo(w*0.62+i*w*0.02,h*0.76);g.stroke();}
+  const d=g.getImageData(0,0,w,h).data;const f=new Float32Array(w*h*3);
+  for(let i=0;i<w*h;i++){for(let k=0;k<3;k++){f[i*3+k]=Math.pow(d[i*4+k]/255,2.2);}}
+  return f;
+}
+function gauss(){let u=0,v=0;while(u===0)u=Math.random();v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function poisson(l){if(l<=0)return 0;if(l<30){let L=Math.exp(-l),k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;}return Math.max(0,Math.round(l+Math.sqrt(l)*gauss()));}
+
+const SW=240,SH=160;const scene=makeScene(SW,SH);
+const ratios=[100,250,300];
+function renderSim(canvas,photons,read){
+  const g=canvas.getContext('2d');const im=g.createImageData(SW,SH);
+  for(let i=0;i<SW*SH;i++){for(let k=0;k<3;k++){
+    const lam=scene[i*3+k]*photons;
+    let m=poisson(lam)+read*gauss();
+    let v=m/photons; v=Math.max(0,Math.min(1,v));
+    im.data[i*4+k]=Math.round(Math.pow(v,1/2.2)*255);
+  }im.data[i*4+3]=255;}
+  g.putImageData(im,0,0);
+}
+function snr(N,r){return N/Math.sqrt(N+r*r);}
+function updateSim(){
+  const L=+light.value, R=ratios[+ratio.value], r=+readn.value;
+  lv.textContent=L.toFixed(1); rv.textContent='x'+R; nv.textContent=r;
+  renderSim(simShort,L,r); renderSim(simLong,L*R,r);
+  const xs=[],ys=[];for(let e=-1;e<=4.3;e+=0.05){const N=Math.pow(10,e);xs.push(N);ys.push(snr(N,r));}
+  if(window.Plotly){
+    Plotly.react('snrPlot',[
+      {x:xs,y:ys,mode:'lines',name:'SNR curve',line:{color:'#6ec6ff'}},
+      {x:[L],y:[snr(L,r)],mode:'markers+text',name:'short',text:['short'],textposition:'top left',marker:{size:12,color:'#ff7b7b'}},
+      {x:[L*R],y:[snr(L*R,r)],mode:'markers+text',name:'long',text:['long'],textposition:'top left',marker:{size:12,color:'#7be0a2'}}
+    ],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#cfd5e4'},margin:{t:30,l:55,r:20,b:45},showlegend:false,
+      title:{text:'SNR vs photons per pixel (white pixel)',font:{size:14}},
+      xaxis:{type:'log',title:'photons (N)',gridcolor:'#2a3145'},yaxis:{type:'log',title:'SNR',gridcolor:'#2a3145'}},{displayModeBar:false,responsive:true});
+  }
+}
+['input'].forEach(ev=>{light.addEventListener(ev,updateSim);ratio.addEventListener(ev,updateSim);readn.addEventListener(ev,updateSim);});
+resim.onclick=updateSim;
+
+/* ---------- amplification demo ---------- */
+const AW=300,AH=140;const ascene=makeScene(AW,AH);
+function updateAmp(){
+  const a=+amp.value;av.textContent='x'+a;
+  const g=ampCanvas.getContext('2d');const im=g.createImageData(AW,AH);
+  const s=a/150;
+  for(let i=0;i<AW*AH;i++){for(let k=0;k<3;k++){let v=Math.min(1,ascene[i*3+k]*s);im.data[i*4+k]=Math.round(Math.pow(v,1/2.2)*255);}im.data[i*4+3]=255;}
+  g.putImageData(im,0,0);
+}
+amp.addEventListener('input',updateAmp);
+document.querySelectorAll('.ampPreset').forEach(b=>b.onclick=()=>{amp.value=b.dataset.v;updateAmp();});
+
+/* ---------- dataset ---------- */
+const DS=[
+ {cam:'Sony α7S II',k:'sony',ratio:'x300',fa:'Bayer',exp:'1/10, 1/30',n:1190},
+ {cam:'Sony α7S II',k:'sony',ratio:'x250',fa:'Bayer',exp:'1/25',n:699},
+ {cam:'Sony α7S II',k:'sony',ratio:'x100',fa:'Bayer',exp:'1/10',n:808},
+ {cam:'Fujifilm X-T2',k:'fuji',ratio:'x300',fa:'X-Trans',exp:'1/30',n:630},
+ {cam:'Fujifilm X-T2',k:'fuji',ratio:'x250',fa:'X-Trans',exp:'1/25',n:650},
+ {cam:'Fujifilm X-T2',k:'fuji',ratio:'x100',fa:'X-Trans',exp:'1/10',n:1117}];
+function drawDS(which){
+  const rows=DS.filter(d=>which==='both'||d.k===which);
+  dsTable.innerHTML='<tr><th>Camera</th><th>Exposure ratio</th><th>Filter array</th><th>Input exposure (s)</th><th># images</th></tr>'+
+    rows.map(d=>`<tr><td>${d.cam}</td><td>${d.ratio}</td><td>${d.fa}</td><td>${d.exp}</td><td>${d.n}</td></tr>`).join('')+
+    `<tr><td colspan="4"><b>Total</b></td><td><b>${rows.reduce((s,d)=>s+d.n,0)}</b></td></tr>`;
+  if(!window.Plotly)return;
+  const tr=[];
+  if(which!=='fuji')tr.push({x:['x100','x250','x300'],y:[808,699,1190],type:'bar',name:'Sony (Bayer)',marker:{color:'#6ec6ff'}});
+  if(which!=='sony')tr.push({x:['x100','x250','x300'],y:[1117,650,630],type:'bar',name:'Fuji (X-Trans)',marker:{color:'#ffcc66'}});
+  Plotly.react('dsPlot',tr,{barmode:'group',paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#cfd5e4'},
+    margin:{t:30,l:50,r:20,b:40},title:{text:'Short-exposure images per condition (Table 1)',font:{size:14}},
+    xaxis:{title:'reference / input exposure ratio'},yaxis:{title:'# images',gridcolor:'#2a3145'},legend:{orientation:'h',y:1.12}},{displayModeBar:false,responsive:true});
+}
+document.querySelectorAll('.dsbtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.dsbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');drawDS(b.dataset.cam);});
+
+/* ---------- pipelines ---------- */
+const PIPES={
+ trad:{stages:[['Raw','The single-channel mosaic straight off the sensor.'],['White balance','Scales R, G, B so that neutral objects look gray. In the dark, the color estimate is unreliable.'],['Demosaic','Interpolates the two missing colors at each pixel from neighbors. Noise gets spread and colored.'],['Denoise, sharpen','Hand-tuned filters for typical noise levels. These are overwhelmed in extreme low light, and sharpening boosts residual noise.'],['Color space conversion','Converts camera colors to standard sRGB.'],['Gamma correction','Brightens dark tones nonlinearly, which also brightens noise.'],['Output','In extreme low light the result has severe noise and color distortion (the paper\'s Figures 5–7).']],
+   info:'A sequence of modules, often tuned for a specific camera. Each step amplifies noise and passes errors on to the next.'},
+ l3:{stages:[['Raw','Sensor mosaic.'],['Pixel categorization','Classifies each pixel by its local context.'],['Learned linear transforms','Applies one of a large collection of local, linear, learned (L3) filters chosen per category.'],['Weighted summation','Combines filter outputs to approximate a camera\'s complex nonlinear pipeline.'],['Output','The paper notes L3 cannot handle the extremely low SNR of fast low-light imaging.']],
+   info:'Jiang et al.\'s L3 approach learns to mimic a traditional pipeline with many simple filters, but it was not built for extreme noise.'},
+ burst:{stages:[['Raw ×N','Several frames of the same scene.'],['Align & merge','Needs dense correspondence across frames and reference ("lucky") frame selection. Alignment may fail in extreme darkness.'],['White balance, demosaic, chroma, denoise',''],['Local tone map',''],['Dehaze, global tone map',''],['Sharpen, hue & saturation',''],['Output','Can be good, but it is complex and does not extend easily to video.']],
+   info:'Hasinoff et al.\'s burst pipeline (smartphones). Effective but elaborate. This paper asks how far a <i>single</i> image can be pushed.'},
+ ours:{stages:[['Bayer raw','H×W×1 mosaic.'],['Pack','Rearranged to H/2 × W/2 × 4 (R, G, G, B channels).'],['− black level, × ratio','Remove the sensor offset, then multiply by the amplification ratio (user-chosen, like ISO).'],['ConvNet (U-net)','One fully-convolutional network does demosaicing, color transformation, noise reduction and enhancement, all learned end-to-end. The noise suppression is blind and adapts locally.'],['12 channels','H/2 × W/2 × 12 output.'],['Sub-pixel layer','Rearranges 12 values into a 2×2 block of RGB pixels, giving H×W×3.'],['sRGB output','The finished image, directly in sRGB.']],
+   info:'The paper\'s pipeline: almost every hand-tuned step is replaced by a single trained network, so errors cannot pile up across stages.'}
+};
+function drawPipe(p){
+  const P=PIPES[p];pipe.innerHTML='';
+  P.stages.forEach((s,i)=>{
+    const d=document.createElement('div');d.className='stage'+((p==='ours'&&i===3)?' net':'');d.textContent=s[0];
+    d.onclick=()=>{document.querySelectorAll('.stage').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');stageInfo.innerHTML='<b>'+s[0]+'</b>: '+(s[1]||'One of the many conventional processing steps after merging.');};
+    pipe.appendChild(d);
+    if(i<P.stages.length-1){const a=document.createElement('span');a.className='arrow';a.textContent='→';pipe.appendChild(a);}
+  });
+  stageInfo.innerHTML=P.info+' <span class="muted">(Click a stage for details.)</span>';
+}
+document.querySelectorAll('.pbtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.pbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');drawPipe(b.dataset.p);});
+
+/* ---------- packing ---------- */
+const COL={R:'#e04a3a',G:'#3fae5a',B:'#3a6be0'};
+function bayer(x,y){return (y%2===0)?(x%2===0?'R':'G'):(x%2===0?'G':'B');}
+function drawPack(mode){
+  const g=pkCanvas.getContext('2d');g.clearRect(0,0,640,220);g.fillStyle='#141824';g.fillRect(0,0,640,220);
+  g.font='12px sans-serif';g.textAlign='center';
+  const N=8;
+  if(mode==='raw'){
+    const s=22,ox=320-N*s/2,oy=15;
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=bayer(x,y);g.fillStyle=COL[c];g.fillRect(ox+x*s,oy+y*s,s-2,s-2);g.fillStyle='#fff';g.fillText(c,ox+x*s+s/2-1,oy+y*s+s/2+4);}
+    pkText.innerHTML='One channel, 8×8 pixels. Each pixel knows only one color, in the 2×2 R-G-G-B Bayer tile.';
+  }else if(mode==='pack'){
+    const s=16,labels=[['R',0,0],['G',1,0],['G',0,1],['B',1,1]];
+    labels.forEach((L,i)=>{const ox=20+i*155,oy=40;
+      for(let y=0;y<N/2;y++)for(let x=0;x<N/2;x++){g.fillStyle=COL[L[0]];g.fillRect(ox+x*s*2,oy+y*s*2,s*2-3,s*2-3);}
+      g.fillStyle='#cfd5e4';g.fillText('channel '+(i+1)+': '+L[0],ox+N*s/2,oy-10);});
+    pkText.innerHTML='<b>Packed:</b> 4 channels at <b>half</b> width and height (4×4 each). Every value is real data and nothing is wasted. This is the paper\'s default. The Sony result is 28.88 dB PSNR.';
+  }else{
+    const s=8,labels=['R','G','G','B'],offs=[[0,0],[1,0],[0,1],[1,1]];
+    labels.forEach((L,i)=>{const ox=28+i*155,oy=40;
+      for(let y=0;y<N;y++)for(let x=0;x<N;x++){const on=(x%2===offs[i][0]&&y%2===offs[i][1]);g.fillStyle=on?COL[L]:'#262c3d';g.fillRect(ox+x*s*2,oy+y*s*2,s*2-2,s*2-2);}
+      g.fillStyle='#cfd5e4';g.fillText('channel '+(i+1)+': '+L+' (masked)',ox+N*s,oy-10);});
+    pkText.innerHTML='<b>Masked:</b> 4 full-resolution channels, each with only its own color\'s pixels kept and the rest zeroed (dark squares). This gave lower scores on Sony (26.95 dB) and tends to lose some hues.';
+  }
+}
+document.querySelectorAll('.pkbtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.pkbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');drawPack(b.dataset.m);});
+
+/* ---------- perceptual ---------- */
+const PERC={x300:{bm3d:92.4,burst:85.2},x100:{bm3d:59.3,burst:47.3}};
+function drawPerc(s){
+  if(!window.Plotly)return;const d=PERC[s];
+  Plotly.react('percPlot',[{x:['Ours vs BM3D','Ours vs Burst (8 aligned frames)'],y:[d.bm3d,d.burst],type:'bar',
+    text:[d.bm3d+'%',d.burst+'%'],textposition:'outside',marker:{color:['#ffcc66','#6ec6ff']}}],
+    {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#cfd5e4'},margin:{t:40,l:55,r:20,b:50},
+     title:{text:'Rate at which workers preferred the paper\'s image (Sony '+s+', Table 2)',font:{size:14}},
+     yaxis:{range:[0,105],title:'% preferring ours',gridcolor:'#2a3145'},
+     shapes:[{type:'line',x0:-0.5,x1:1.5,y0:50,y1:50,line:{color:'#9aa3b8',dash:'dash'}}]},{displayModeBar:false,responsive:true});
+}
+document.querySelectorAll('.ptb').forEach(b=>b.onclick=()=>{document.querySelectorAll('.ptb').forEach(x=>x.classList.remove('on'));b.classList.add('on');drawPerc(b.dataset.s);});
+
+/* ---------- ablations ---------- */
+const AB=[
+ ['1. Default (U-net, raw, L1, packed)',[28.88,0.787],[26.61,0.680]],
+ ['2. U-net → CAN',[27.40,0.792],[25.71,0.710]],
+ ['3. Raw → sRGB input',[17.40,0.554],[25.11,0.648]],
+ ['4. L1 → SSIM loss',[28.64,0.817],[26.20,0.685]],
+ ['5. L1 → L2 loss',[28.47,0.784],[26.51,0.680]],
+ ['6. Packed → Masked',[26.95,0.744],null],
+ ['7. X-Trans 3×3 → 6×6',null,[23.05,0.567]],
+ ['8. Stretched references',[18.23,0.674],[16.85,0.535]]];
+let abM='psnr',abC='Sony';
+function drawAb(){
+  if(!window.Plotly)return;
+  const idx=abM==='psnr'?0:1,ci=abC==='Sony'?1:2;
+  const rows=AB.filter(r=>r[ci]);
+  const names=rows.map(r=>r[0]).reverse(),vals=rows.map(r=>r[ci][idx]).reverse();
+  const base=AB[0][ci][idx];
+  const colors=vals.map((v,i)=>names[i].startsWith('1.')?'#ffcc66':(v>=base?'#7be0a2':'#ff7b7b'));
+  Plotly.react('abPlot',[{y:names,x:vals,type:'bar',orientation:'h',marker:{color:colors},text:vals.map(v=>abM==='psnr'?v.toFixed(2)+' dB':v.toFixed(3)),textposition:'outside'}],
+   {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#cfd5e4'},margin:{t:40,l:250,r:60,b:45},
+    title:{text:abC+' — mean '+(abM==='psnr'?'PSNR (dB)':'SSIM')+' (Table 3)',font:{size:14}},
+    xaxis:{range:abM==='psnr'?[0,33]:[0,0.95],gridcolor:'#2a3145'},
+    shapes:[{type:'line',x0:base,x1:base,y0:-0.5,y1:names.length-0.5,line:{color:'#ffcc66',dash:'dot'}}]},{displayModeBar:false,responsive:true});
+  abNote.innerHTML='Gold = default pipeline (dotted line). Green = equal or higher than default on this metric. Red = lower. '+
+    (abC==='Sony'?'Row 7 applies only to Fuji (X-Trans).':'Row 6 (masking) was tested only on Sony Bayer data.')+
+    ' Higher SSIM does not always mean better-looking images: CAN scored higher SSIM but sometimes lost color.';
+}
+document.querySelectorAll('.abm').forEach(b=>b.onclick=()=>{document.querySelectorAll('.abm').forEach(x=>x.classList.remove('on'));b.classList.add('on');abM=b.dataset.m;drawAb();});
+document.querySelectorAll('.abc').forEach(b=>b.onclick=()=>{document.querySelectorAll('.abc').forEach(x=>x.classList.remove('on'));b.classList.add('on');abC=b.dataset.c;drawAb();});
+
+/* ---------- init ---------- */
+window.addEventListener('load',()=>{updateSim();updateAmp();drawDS('both');drawPipe('trad');drawPack('raw');drawPerc('x300');drawAb();});
+</script>
+</body>
+</html>
