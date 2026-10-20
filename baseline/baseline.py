@@ -31,7 +31,9 @@ Rules:
 
 
 def pdf_text(path: Path) -> str:
-    return "\n\n".join(page.extract_text() or "" for page in PdfReader(path).pages)
+    text = "\n\n".join(page.extract_text() or "" for page in PdfReader(path).pages)
+    # Some PDF fonts extract as lone surrogates, which the API can't encode as UTF-8; drop them.
+    return text.encode("utf-8", "ignore").decode("utf-8")
 
 
 def extract_html(text: str) -> str:
