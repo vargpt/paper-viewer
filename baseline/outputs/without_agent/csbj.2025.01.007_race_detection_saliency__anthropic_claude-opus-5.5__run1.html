@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where Does an AI "See" Race in a Chest X-ray? An Interactive Guide</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+:root{
+  --bg:#0f1419; --panel:#182029; --panel2:#1f2a36; --ink:#e7edf3; --muted:#9fb0c0;
+  --accent:#5cc8ff; --warn:#ffb454; --good:#7ee2a8; --bad:#ff7a7a; --line:#2c3a48;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65}
+header{padding:64px 20px 40px;text-align:center;background:radial-gradient(ellipse at top,#1d3346 0%,var(--bg) 70%)}
+header h1{font-size:clamp(1.8rem,4vw,2.8rem);margin:0 0 12px;line-height:1.2}
+header p.sub{color:var(--muted);max-width:760px;margin:0 auto;font-size:1.08rem}
+header .cite{margin-top:18px;font-size:.88rem;color:var(--muted)}
+nav{position:sticky;top:0;z-index:10;background:rgba(15,20,25,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding:8px}
+nav a{color:var(--muted);text-decoration:none;font-size:.88rem;padding:4px 10px;border-radius:6px}
+nav a:hover{color:var(--ink);background:var(--panel2)}
+main{max-width:980px;margin:0 auto;padding:20px}
+section{margin:56px 0}
+h2{font-size:1.65rem;border-left:4px solid var(--accent);padding-left:12px;margin-bottom:14px}
+h3{color:var(--accent);margin-top:28px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:18px 0}
+.callout{background:#1b2d22;border-left:4px solid var(--good);padding:14px 18px;border-radius:8px;margin:18px 0}
+.warn{background:#30261a;border-left:4px solid var(--warn);padding:14px 18px;border-radius:8px;margin:18px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.stat{display:flex;gap:14px;flex-wrap:wrap}
+.stat div{flex:1;min-width:140px;background:var(--panel2);border-radius:10px;padding:14px;text-align:center}
+.stat b{display:block;font-size:1.6rem;color:var(--accent)}
+.stat span{font-size:.85rem;color:var(--muted)}
+button,.btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:.92rem;margin:3px}
+button:hover{border-color:var(--accent)}
+button.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--accent)}
+canvas{background:#000;border-radius:8px;display:block;max-width:100%}
+.demo{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.demo .controls{flex:1;min-width:260px}
+.small{font-size:.86rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.78rem;font-weight:600}
+.tg{background:#1f4a33;color:var(--good)} .tb{background:#4a1f1f;color:var(--bad)} .tw{background:#4a3a1f;color:var(--warn)}
+.formula{font-family:"Cambria Math",Georgia,serif;font-size:1.25rem;text-align:center;padding:14px;background:var(--panel2);border-radius:8px;margin:12px 0}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding:10px 10px 10px 52px;margin:8px 0;background:var(--panel2);border-radius:8px}
+.steps li::before{content:counter(s);position:absolute;left:12px;top:10px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#08131c;font-weight:700;text-align:center;line-height:28px}
+.methods{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.method{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;transition:.15s}
+.method:hover,.method.sel{border-color:var(--accent)}
+.method b{display:block}
+.method .k{font-size:.75rem;color:var(--muted)}
+#methodInfo{min-height:70px}
+.kern{display:grid;grid-template-columns:repeat(3,64px);gap:6px}
+.kern input{width:64px;padding:6px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;text-align:center;font-size:1rem}
+footer{text-align:center;color:var(--muted);font-size:.85rem;padding:40px 20px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Where Does an AI "See" Race in a Chest X-ray?</h1>
+  <p class="sub">AI models can guess a patient's self-reported race from a chest X-ray — something radiologists can't do. This paper tests eight popular "saliency" tools to find <em>where</em> in the image that information lives, and asks a harder question: can we even trust these tools?</p>
+  <p class="cite">Based on: Konate, Lebrat, Santa Cruz, Gichoya, Price, Seyyed-Kalantari, Fookes, Bradley &amp; Salvado. <em>"Interpretability of AI race detection model in medical imaging with saliency methods."</em> Computational and Structural Biotechnology Journal, 2025.</p>
+</header>
+
+<nav>
+  <a href="#problem">Problem</a><a href="#saliency">Saliency 101</a><a href="#test">The Test</a><a href="#method">Method</a><a href="#atlas">Atlas</a><a href="#results">Results</a><a href="#lowfreq">Low-frequency</a><a href="#limits">Limitations</a><a href="#takeaways">Takeaways</a>
+</nav>
+
+<main>
+
+<section id="problem">
+<h2>1. The problem: a hidden signal with real consequences</h2>
+<p>Deep neural networks (DNNs) are increasingly used to read medical images. But to doctors they are often a <strong>"black box"</strong>: they give an answer without a simple explanation of why.</p>
+<p>An earlier study by Gichoya et al. showed something unsettling: AI models can predict a patient's race from medical images with very high accuracy — across modalities, tasks and datasets — even though no human radiologist can do this, and even though the models were not built to look for race. That study tried one explanation tool (Grad-CAM) and <strong>found no consistent region</strong> explaining the prediction.</p>
+<div class="warn"><strong>Why it matters:</strong> DNNs can be unfair in disease diagnosis — for example, disproportionately reporting Black patients as healthy compared with White patients, which can lead to denial of needed care. If a model quietly uses race information when diagnosing disease, clinicians may not be able to judge whether that's appropriate.</div>
+<p>The paper defines <em>unfairness</em> as differences in performance for or against a subgroup — e.g. lower disease-diagnosis accuracy for one racial, age or sex group than another.</p>
+<p><strong>This paper's goal:</strong> use explainability tools to find the subtle cues a DNN uses to detect race in chest X-rays — and, crucially, to <em>evaluate whether those tools actually work</em>.</p>
+</section>
+
+<section id="saliency">
+<h2>2. Saliency maps in plain language</h2>
+<p>A <strong>saliency map</strong> is a heat map laid over an image showing which pixels mattered most for the AI's decision. The catch: different saliency methods often produce <em>different</em> maps for the same image. The paper compares eight. Click one to learn how it works.</p>
+<div class="methods" id="methodGrid"></div>
+<div class="card" id="methodInfo"><span class="small">Click a method above.</span></div>
+<p class="small">Methods 1–7 were run with the TorchRay package; RankPix used the technique from a separate publication by the first author's group.</p>
+</section>
+
+<section id="test">
+<h2>3. The key idea: a "keep it / remove it" test</h2>
+<p>There's no ground truth telling us where race "is" in an X-ray. So how do you grade a saliency method? The authors propose a practical definition:</p>
+<div class="callout">An <strong>optimal saliency method</strong> finds a region that <strong>(1)</strong> lets the network still predict correctly when it sees <em>only</em> that region, and <strong>(2)</strong> misleads the network when that region is <em>removed</em>.</div>
+<p>They measure both with <strong>AUC</strong> (area under the ROC curve) on a Black-vs-White classification. AUC = 1 means perfect separation; AUC = 0.5 means coin-flipping. The ideal method: <strong>mask alone → AUC ≈ 1</strong>, <strong>mask removed → AUC ≈ 0.5</strong>.</p>
+
+<div class="card">
+<h3 style="margin-top:0">Try it: the two image manipulations</h3>
+<p class="small">⚠ This is a <strong>schematic, synthetic</strong> "X-ray" and made-up saliency map, purely to show the procedure. It is not paper data.</p>
+<div class="demo">
+  <canvas id="xray" width="260" height="300"></canvas>
+  <div class="controls">
+    <p><strong>View:</strong><br>
+      <button data-view="orig" class="on">Original</button>
+      <button data-view="heat">Saliency overlay</button>
+      <button data-view="keep">Keep mask only</button>
+      <button data-view="remove">Remove mask</button>
+    </p>
+    <p><strong>Saliency style:</strong><br>
+      <button data-sal="compact" class="on">Compact (one blob)</button>
+      <button data-sal="scatter">Fragmented (many patches)</button>
+    </p>
+    <p><strong>Mask size (top % of salient pixels): <span id="thrVal">15</span>%</strong>
+      <input type="range" id="thr" min="5" max="40" step="5" value="15"></p>
+    <div id="viewExplain" class="small"></div>
+  </div>
+</div>
+</div>
+<p>In the paper, <em>"keep mask only"</em> sets everything outside the mask to 0 (black), and <em>"remove mask"</em> fills the mask region with mid-gray (0.5). The authors tried two mask sizes — <strong>15%</strong> and <strong>30%</strong> of pixels — motivated by prior work (Fong et al.) showing that ~15% of the most informative pixels can be as effective as the whole image, and that perturbing ~20% can have a similar effect to perturbing all of it.</p>
+</section>
+
+<section id="method">
+<h2>4. How the study was done</h2>
+<div class="stat">
+  <div><b>2,200</b><span>test X-rays from MIMIC-CXR<br>(200 Asian, 1,000 Black, 1,000 White)</span></div>
+  <div><b>ResNet34</b><span>3-class race classifier</span></div>
+  <div><b>0.94 / 0.97 / 0.97</b><span>test AUC for Asian / Black / White</span></div>
+  <div><b>8</b><span>saliency methods compared</span></div>
+</div>
+<p>Images with visible medical devices or clinically significant findings were removed after visual inspection. Validation AUCs (on 10,000 scans) were 0.92, 0.93 and 0.95 for Asian, Black and White. Because the Asian group was small, the saliency analysis focuses on <strong>Black vs. White</strong>.</p>
+<ol class="steps">
+  <li><strong>Build an atlas.</strong> Align all X-rays to a common "average chest" (details below), so maps from different people can be compared pixel by pixel.</li>
+  <li><strong>Compute saliency maps</strong> for every image with each method, and threshold them into binary masks (top 15% or 30% of pixels).</li>
+  <li><strong>Average the masks per group.</strong> Each subject's mask is warped into atlas space and averaged into a group saliency map.</li>
+  <li><strong>Warp the group mask back</strong> onto each patient's original image, giving a patient-specific mask.</li>
+  <li><strong>Re-classify twice:</strong> keeping only the mask, and removing the mask. Compare AUCs to the original.</li>
+</ol>
+</section>
+
+<section id="atlas">
+<h2>5. The atlas: an "average chest" for each group</h2>
+<p>Using the ANTs software package, the authors registered (aligned) images in three successive stages:</p>
+<div class="card">
+  <button class="stage on" data-stage="0">Rigid</button>
+  <button class="stage" data-stage="1">Affine</button>
+  <button class="stage" data-stage="2">Non-linear (SyN)</button>
+  <p id="stageText" style="margin-top:10px"></p>
+</div>
+<p>They started from a random image per group, registered all others to it, averaged them into a new atlas, and repeated this <strong>five times</strong> for each stage. Images where registration clearly failed were removed by visual check. The result: an atlas for the whole population and one per race group.</p>
+
+<h3>Are the group averages actually different?</h3>
+<p>Subtracting atlases shows where groups differ in brightness. To check whether differences are real or just noise, the authors ran a permutation test:</p>
+<div class="formula">z = (actual difference − mean of shuffled differences) ÷ std of shuffled differences</div>
+<p><strong>In plain words:</strong> They formed 1,000 random "fake" pairs of groups, each mixing 50 White and 50 Black images, so any difference between them should be about zero. This gives, for every pixel, how big a difference you'd expect by chance (mean and spread). Then the real difference between 100 White and 100 Black images is expressed in units of that chance spread — a z-score. A z of 5 means "five times bigger than random variation would typically produce."</p>
+
+<div class="card">
+<h3 style="margin-top:0">Play with the z-score</h3>
+<div class="grid2">
+<div>
+<label>Actual group difference (pixel brightness): <span id="zd">0.30</span></label><input type="range" id="zDiff" min="-1" max="1" step="0.01" value="0.30">
+<label>Spread under random shuffling (std): <span id="zs">0.05</span></label><input type="range" id="zStd" min="0.01" max="0.5" step="0.01" value="0.05">
+<p class="small">(Mean of shuffled differences assumed ≈ 0, as the paper's hypothesis expects.)</p>
+</div>
+<div style="text-align:center"><div style="font-size:3rem;font-weight:700" id="zOut">6.0</div><div id="zMsg" class="small"></div></div>
+</div>
+</div>
+
+<div class="callout"><strong>What they found:</strong> differences were highly significant, with large areas beyond <strong>±5 standard deviations</strong>. Comparing White and Black atlases, the <strong>trachea, shoulders and neck appear brighter for White (and Asian) scans</strong> — suggesting more X-ray absorption or denser tissue there — while the <strong>area below the diaphragm is brighter for Black scans</strong>, especially compared with White scans. The authors note that the <em>causes</em> of these intensity differences were not explored.</div>
+</section>
+
+<section id="results">
+<h2>6. Results: which saliency method passes the test?</h2>
+<p>Looking at average maps, most methods agreed the <strong>trachea, parts of the shoulders and parts of the lungs</strong> were most salient. Extremal Perturbation (which takes a target area) was run at 5%, 10%, 20%, 30% and 40%: above 20% it highlighted the lungs; at smaller sizes it highlighted the trachea for Asian and Black scans and the lung for White scans.</p>
+<p>But "looks plausible" isn't the same as "is correct." Switch thresholds to see how each method fared on the keep/remove test. Original whole-image AUC (Black vs. White): <strong>0.98</strong>.</p>
+
+<div class="card">
+  <button class="thrBtn on" data-t="15">Masks at 15%</button>
+  <button class="thrBtn" data-t="30">Masks at 30%</button>
+  <div id="resSummary" style="margin:12px 0"></div>
+  <table id="resTable"></table>
+  <p class="small">Descriptions summarise the paper's text. Exact bar heights for every method were shown only in the paper's figures; the numbers quoted here are those stated explicitly in the text.</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">The three "winners" at 30%: AUC when their mask is removed</h3>
+<div id="chart" style="height:340px"></div>
+<p class="small">Values as reported in the paper's text. Lower is better here — closer to 0.5 means removing the region left the network guessing.</p>
+</div>
+
+<div class="callout"><strong>Headline:</strong> At 30%, every method except Perturbation produced masks that predicted race well on their own (AUC above 0.75). But only <strong>Rise</strong> also drove the network to pure chance (AUC 0.5) when its region was removed. GradCAM (0.53) and Linear (0.57) came close.</div>
+
+<h3>What did the good maps highlight?</h3>
+<ul>
+<li><strong>GradCAM &amp; Linear</strong> looked similar: trachea and lungs. Black scans showed more pronounced neck areas and fully visible lungs; White scans highlighted the left shoulder and inner right lung.</li>
+<li><strong>Rise</strong> gave a <em>fragmented</em> map. For White scans: both shoulders, right lung, part of the trachea, upper lung. For Black scans: right lung, part of the trachea, upper lung, and a small patch at the bottom of the chest. It also emphasised <strong>scan discontinuities</strong> relevant to the prediction.</li>
+<li><strong>Perturbation 40</strong> did the reverse of what you'd want: its mask alone gave AUC 0.5, while removing it left accuracy as good as the original — and its region largely didn't overlap with Rise and GradCAM.</li>
+</ul>
+<p>These regions line up with the atlas differences: the biggest group differences were in the upper part of the scans and the trachea — the same areas the network relied on. The authors suggest the intensity difference might be a simple proxy the network uses.</p>
+</section>
+
+<section id="lowfreq">
+<h2>7. A clue: the network may use "low-frequency" features</h2>
+<p>Why did a good explanation need a large (30%) and scattered region? The authors hypothesise that the network relies on <strong>low-frequency features</strong> — broad, smooth variations like overall brightness of regions — so race information is spread across the whole image rather than sitting in one spot. Humans are more sensitive to <em>contrast</em> than to absolute <em>intensity</em>, so such cues would be nearly invisible to us.</p>
+<p>To probe this, they computed the <strong>DC gain</strong> of the network's convolution filters: how strongly a filter responds to a perfectly flat, constant input. For a filter, that's simply the <strong>sum of its weights</strong>. A filter with zero DC gain ignores overall brightness; a non-zero one responds to it.</p>
+
+<div class="card">
+<h3 style="margin-top:0">Try it: build a 3×3 filter</h3>
+<div class="demo">
+<div>
+<div class="kern" id="kern"></div>
+<p><button id="kBlur">Blur</button><button id="kEdge">Edge detector</button><button id="kRand">Random</button></p>
+</div>
+<div class="controls">
+<p>DC gain (sum of weights): <b id="dcOut" style="font-size:1.6rem;color:var(--accent)"></b></p>
+<label>Flat image brightness: <span id="flatV">0.5</span></label>
+<input type="range" id="flat" min="0" max="1" step="0.05" value="0.5">
+<p>Filter output on that flat image: <b id="flatOut"></b></p>
+<p id="dcMsg" class="small"></p>
+</div>
+</div>
+</div>
+<div class="callout"><strong>Finding:</strong> all filters in the network had <strong>non-zero DC gain</strong>, meaning the network does take in low-frequency / overall-intensity information. The authors stress this is a <em>preliminary</em> lead, not proof.</div>
+</section>
+
+<section id="limits">
+<h2>8. Limitations and cautions</h2>
+<div class="grid2">
+<div class="card"><strong>No ground truth.</strong> Nobody knows where race information "really" is in an X-ray, so the keep/remove AUC test is a proxy for faithfulness, not a definitive answer.</div>
+<div class="card"><strong>Methods disagree.</strong> Even the successful methods (Rise, GradCAM, Linear) highlight different regions, making a reliable anatomical explanation hard.</div>
+<div class="card"><strong>Thresholding can bias results.</strong> Gradient methods assign nearly equal importance to many scattered pixels; picking the "top" ones can distort their AUC scores.</div>
+<div class="card"><strong>Mask size matters.</strong> Conclusions changed between 15% and 30%, and saliency methods assume a single focused region — which the network may not use.</div>
+<div class="card"><strong>Self-identified labels.</strong> Race labels are self-reported and may not match biological ancestry (e.g. someone identifying as White may be bi-racial). No clear anatomical chest differences between races are established in the literature or by clinicians.</div>
+<div class="card"><strong>Scope.</strong> One dataset (MIMIC-CXR), one model (ResNet34); the small Asian cohort was left out of saliency analysis; causes of intensity differences weren't explored; the low-frequency analysis is preliminary.</div>
+</div>
+<p>The authors cite the classic "husky vs. wolf" example: a model that seemed to recognise wolves was actually using <em>snow in the background</em>. Saliency maps assume networks reason like humans, focusing on a specific object — but networks may exploit highly predictive cues humans can't perceive.</p>
+</section>
+
+<section id="takeaways">
+<h2>9. Takeaways</h2>
+<ul>
+<li>🔍 <strong>Rise worked best:</strong> at a 30% mask size, its region alone predicted race well and its removal left the network at chance (AUC 0.5).</li>
+<li>📏 <strong>Size of the salient region is crucial.</strong> A meaningful explanation for race required a large chunk of the image.</li>
+<li>🆕 <strong>Newer isn't better.</strong> The most recent methods did not necessarily give the most faithful explanations — likely because they were designed for everyday photos with clear objects, not medical images.</li>
+<li>🌫️ <strong>Low-level intensity cues</strong> may drive race prediction; the authors recommend <strong>data augmentation</strong> to stop networks from learning irrelevant gray-level patterns.</li>
+<li>⚠️ <strong>Use saliency maps in medicine with caution</strong>, and evaluate them rigorously before deployment. Task- and model-specific interpretability methods are the suggested way forward.</li>
+</ul>
+<p>The authors see such evaluated interpretability tools as useful during model validation to detect demographic-specific biases, and potentially to give clinicians transparency about which image regions drive AI predictions.</p>
+</section>
+
+</main>
+
+<footer>Interactive explainer of Konate et al., Comput Struct Biotechnol J (2025). Synthetic demos are illustrative only; all reported numbers come from the paper's text.</footer>
+
+<script>
+// ---------- Methods ----------
+const methods=[
+ {n:"Gradient",k:"Gradient-based",d:"Asks: if I nudge each pixel slightly, how much does the output change? Computed by back-propagating the output's gradient to the input image. Produces scattered maps."},
+ {n:"DeconvNet",k:"Gradient-based",d:"A variant of backpropagation that keeps only positive signals while passing gradients back. In this study it mostly highlighted the right side of the scan."},
+ {n:"Guided Backpropagation",k:"Gradient-based",d:"Also restricts back-propagated signals to positive values, giving sharper maps. In this study it was the one method that focused on the lung rather than the trachea."},
+ {n:"Grad-CAM",k:"Gradient-based (layer)",d:"Combines a deep layer's features with its gradients to get a compact, blob-like map, then upsamples it to image size. Upsampling can include uninformative pixels. This was the method used in the original Gichoya et al. study."},
+ {n:"Linear Approximation",k:"Gradient-based (layer)",d:"A layer-based attribution in TorchRay. Its maps closely resembled Grad-CAM's here, highlighting trachea and lungs."},
+ {n:"Extremal Perturbation",k:"Perturbation-based",d:"Optimises a mask of a chosen area (5%, 10%, 20%, 30%, 40% here) that most affects the prediction. Produces compact, localised regions."},
+ {n:"Rise",k:"Perturbation-based",d:"Randomly hides parts of the image with many masks, records how the prediction changes, and averages. Produces fragmented maps spread across the image — which turned out to be the most faithful here."},
+ {n:"RankPix",k:"Perturbation-based",d:"Finds the smallest region that changes the prediction at each network layer, then averages these maps into a final, compact mask."}
+];
+const grid=document.getElementById('methodGrid');
+methods.forEach((m,i)=>{const el=document.createElement('div');el.className='method';el.innerHTML=`<span class="k">${i+1}. ${m.k}</span><b>${m.n}</b>`;
+ el.onclick=()=>{document.querySelectorAll('.method').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');
+ document.getElementById('methodInfo').innerHTML=`<strong>${m.n}</strong> <span class="small">(${m.k})</span><p style="margin:6px 0 0">${m.d}</p>`};grid.appendChild(el)});
+
+// ---------- Synthetic X-ray demo ----------
+const cv=document.getElementById('xray'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+function ell(x,y,cx,cy,rx,ry){const dx=(x-cx)/rx,dy=(y-cy)/ry;return dx*dx+dy*dy}
+const img=new Float32Array(W*H);
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+ let v=0.05;
+ if(ell(x,y,130,175,115,140)<1)v=0.55;
+ if(ell(x,y,130,40,120,45)<1&&y<70)v=Math.max(v,0.6); // shoulders
+ if(ell(x,y,82,165,42,95)<1)v=0.18;
+ if(ell(x,y,178,165,42,95)<1)v=0.18;
+ if(Math.abs(x-130)<9&&y<140&&y>10)v=0.75; // trachea
+ if(y>255&&ell(x,y,130,175,115,140)<1)v=0.7; // below diaphragm
+ v+= (Math.sin(x*0.9)*Math.cos(y*0.7))*0.02;
+ img[y*W+x]=Math.min(1,Math.max(0,v));
+}
+function rng(s){return()=>{s=(s*16807)%2147483647;return s/2147483647}}
+function makeSal(type){const s=new Float32Array(W*H);
+ if(type==='compact'){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const d=ell(x,y,130,90,45,75);s[y*W+x]=Math.exp(-d*1.5)}}
+ else{const r=rng(7);const blobs=[];for(let i=0;i<22;i++)blobs.push([30+r()*200,20+r()*260,10+r()*22,0.4+r()*0.6]);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=0;for(const b of blobs){const d=((x-b[0])**2+(y-b[1])**2)/(b[2]*b[2]);v+=b[3]*Math.exp(-d)}s[y*W+x]=v}}
+ return s}
+const sals={compact:makeSal('compact'),scatter:makeSal('scatter')};
+let view='orig',salType='compact',thr=15;
+function cutoff(s,p){const a=Array.from(s).sort((a,b)=>b-a);return a[Math.floor(a.length*p/100)-1]}
+const explains={
+ orig:"The full image. In the paper the network gets AUC 0.98 (Black vs. White) on full images.",
+ heat:"Red overlay = the top-% most salient pixels that form the binary mask.",
+ keep:"Everything outside the mask set to 0 (black). A good method should still let the network predict correctly (AUC near 1).",
+ remove:"Mask region filled with gray (0.5). A good method should leave the network guessing (AUC near 0.5)."};
+function draw(){const s=sals[salType],c=cutoff(s,thr),id=ctx.createImageData(W,H);
+ for(let i=0;i<W*H;i++){let v=img[i],m=s[i]>=c,r,g,b;
+  if(view==='keep'&&!m)v=0; if(view==='remove'&&m)v=0.5;
+  r=g=b=v*255;
+  if(view==='heat'&&m){r=r*0.4+255*0.6;g=g*0.5+60*0.5;b=b*0.5}
+  id.data[i*4]=r;id.data[i*4+1]=g;id.data[i*4+2]=b;id.data[i*4+3]=255}
+ ctx.putImageData(id,0,0);document.getElementById('viewExplain').innerHTML=explains[view]+(salType==='scatter'?"<br><br>Fragmented maps (like Rise's) spread the mask over many regions — useful if the network relies on information dispersed across the image.":"<br><br>Compact maps (like Perturbation or RankPix) concentrate on one area — they may miss information if it's spread out.")}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('on'));b.classList.add('on');view=b.dataset.view;draw()});
+document.querySelectorAll('[data-sal]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-sal]').forEach(x=>x.classList.remove('on'));b.classList.add('on');salType=b.dataset.sal;draw()});
+document.getElementById('thr').oninput=e=>{thr=+e.target.value;document.getElementById('thrVal').textContent=thr;draw()};
+draw();
+
+// ---------- Atlas stages ----------
+const stageTxt=["<strong>Rigid:</strong> only shifts and rotates each image to line it up — the shape is not changed.","<strong>Affine:</strong> also allows scaling and shearing, compensating for different body sizes and proportions.","<strong>Non-linear (SyN):</strong> flexible, smooth (diffeomorphic) warping that matches local anatomy. These deformation fields were later reused to move each patient's saliency mask into atlas space and back."];
+document.querySelectorAll('.stage').forEach(b=>b.onclick=()=>{document.querySelectorAll('.stage').forEach(x=>x.classList.remove('on'));b.classList.add('on');document.getElementById('stageText').innerHTML=stageTxt[+b.dataset.stage]});
+document.getElementById('stageText').innerHTML=stageTxt[0];
+
+// ---------- Z-score ----------
+function zUpd(){const d=+zDiff.value,s=+zStd.value,z=d/s;zd.textContent=d.toFixed(2);zs.textContent=s.toFixed(2);zOut.textContent=z.toFixed(1);
+ zOut.style.color=Math.abs(z)>=5?'var(--good)':Math.abs(z)>=2?'var(--warn)':'var(--muted)';
+ zMsg.textContent=Math.abs(z)>=5?"Beyond ±5 — like the large regions found in the paper: very unlikely to be chance.":Math.abs(z)>=2?"Noticeable, but weaker than the paper's main differences.":"Within normal random variation."}
+const zDiff=document.getElementById('zDiff'),zStd=document.getElementById('zStd'),zd=document.getElementById('zd'),zs=document.getElementById('zs'),zOut=document.getElementById('zOut'),zMsg=document.getElementById('zMsg');
+zDiff.oninput=zUpd;zStd.oninput=zUpd;zUpd();
+
+// ---------- Results ----------
+const G='<span class="tag tg">',B='<span class="tag tb">',Wn='<span class="tag tw">',E='</span>';
+const res={
+ 15:{sum:"<strong>At 15%:</strong> most masks were enough to predict race on their own, but removing them did <em>not</em> fool the network. Surprisingly, most methods did better using the pixels <em>outside</em> their mask than inside it.",
+  rows:[
+  ["DeconvNet",G+"AUC &gt; 0.7"+E,B+"Outside &gt; inside"+E],
+  ["Gradient",G+"AUC &gt; 0.7"+E,B+"Outside &gt; inside"+E],
+  ["Guided Backprop",G+"AUC &gt; 0.7"+E,Wn+"Expected drop, but still predicts race"+E],
+  ["Grad-CAM",B+"AUC ≤ 0.7"+E,B+"Outside &gt; inside"+E],
+  ["Linear",B+"AUC ≤ 0.7"+E,B+"Outside &gt; inside"+E],
+  ["Perturbation 5%",B+"AUC ≤ 0.7"+E,B+"Comparable to original"+E],
+  ["Perturbation 10/30/40%",G+"AUC &gt; 0.7"+E,B+"Outside &gt; inside"+E],
+  ["Perturbation 20%",B+"AUC ≤ 0.7"+E,B+"Comparable to original"+E],
+  ["Rise",G+"AUC &gt; 0.7"+E,B+"Outside &gt; inside"+E],
+  ["RankPix",G+"AUC &gt; 0.7"+E,Wn+"Expected drop, but still predicts race"+E]]},
+ 30:{sum:"<strong>At 30%:</strong> masks now cover more of the lungs. All methods except Perturbation predict race well from the mask alone (AUC &gt; 0.75). Only Rise, Grad-CAM and Linear push the network near chance when their mask is removed.",
+  rows:[
+  ["Rise",G+"AUC &gt; 0.75"+E,G+"AUC 0.50 — chance ✓"+E],
+  ["Grad-CAM",G+"AUC &gt; 0.75"+E,G+"AUC 0.53 — near chance"+E],
+  ["Linear",G+"AUC &gt; 0.75"+E,G+"AUC 0.57 — near chance"+E],
+  ["Guided Backprop / Gradient / DeconvNet",G+"AUC &gt; 0.75"+E,B+"Not a reliable salient region"+E],
+  ["RankPix",G+"AUC &gt; 0.75"+E,B+"Not a reliable salient region"+E],
+  ["Perturbation (except 10%)",B+"Opposite pattern"+E,B+"Opposite pattern"+E],
+  ["Perturbation 40%",B+"AUC 0.50"+E,B+"As accurate as original"+E]]}};
+function showRes(t){const r=res[t];document.getElementById('resSummary').innerHTML=r.sum;
+ document.getElementById('resTable').innerHTML="<tr><th>Method</th><th>Mask only (want ≈ 1)</th><th>Mask removed (want ≈ 0.5)</th></tr>"+r.rows.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td></tr>`).join('')}
+document.querySelectorAll('.thrBtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.thrBtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');showRes(b.dataset.t)});
+showRes(15);
+
+Plotly.newPlot('chart',[{x:['Rise','Grad-CAM','Linear'],y:[0.50,0.53,0.57],type:'bar',marker:{color:['#7ee2a8','#5cc8ff','#5cc8ff']},text:['0.50','0.53','0.57'],textposition:'outside',name:'Mask removed'}],
+ {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#e7edf3'},margin:{t:20,b:40,l:50,r:20},
+  yaxis:{range:[0,1.05],title:'AUC (Black vs. White)',gridcolor:'#2c3a48'},
+  shapes:[{type:'line',xref:'paper',x0:0,x1:1,y0:0.98,y1:0.98,line:{color:'#ffb454',dash:'dash'}},{type:'line',xref:'paper',x0:0,x1:1,y0:0.5,y1:0.5,line:{color:'#ff7a7a',dash:'dot'}}],
+  annotations:[{xref:'paper',x:1,y:0.98,text:'Original image: 0.98',showarrow:false,yanchor:'bottom',xanchor:'right',font:{color:'#ffb454'}},{xref:'paper',x:1,y:0.5,text:'Chance: 0.5',showarrow:false,yanchor:'top',xanchor:'right',font:{color:'#ff7a7a'}}],showlegend:false},
+ {displayModeBar:false,responsive:true});
+
+// ---------- DC gain ----------
+const kern=document.getElementById('kern'),ins=[];
+for(let i=0;i<9;i++){const e=document.createElement('input');e.type='number';e.step='0.1';e.value='0';e.oninput=dcUpd;kern.appendChild(e);ins.push(e)}
+function setK(a){a.forEach((v,i)=>ins[i].value=(+v).toFixed(2));dcUpd()}
+document.getElementById('kBlur').onclick=()=>setK(Array(9).fill(1/9));
+document.getElementById('kEdge').onclick=()=>setK([-1,-1,-1,-1,8,-1,-1,-1,-1]);
+document.getElementById('kRand').onclick=()=>setK(Array.from({length:9},()=>Math.random()*2-1));
+document.getElementById('flat').oninput=dcUpd;
+function dcUpd(){const g=ins.reduce((a,e)=>a+(+e.value||0),0),f=+document.getElementById('flat').value;
+ document.getElementById('flatV').textContent=f.toFixed(2);
+ document.getElementById('dcOut').textContent=g.toFixed(2);
+ document.getElementById('flatOut').textContent=(g*f).toFixed(2);
+ document.getElementById('dcMsg').textContent=Math.abs(g)<1e-6?"Zero DC gain: this filter is blind to uniform brightness — it only reacts to changes (edges, texture).":"Non-zero DC gain: the output changes with overall brightness, so this filter passes low-frequency/intensity information forward — as every filter in the paper's network did."}
+setK(Array(9).fill(1/9));
+</script>
+</body>
+</html>

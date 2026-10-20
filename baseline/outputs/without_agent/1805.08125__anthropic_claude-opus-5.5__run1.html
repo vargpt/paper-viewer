@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Marketplace for Data: An Algorithmic Solution (Interactive Explainer)</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  :root{
+    --bg:#fbfaf7; --ink:#1f2430; --muted:#5d6475; --accent:#2d6cdf; --accent2:#e2733b;
+    --green:#2e9e6a; --card:#ffffff; --line:#e4e1d8; --soft:#f1eee6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.65;font-size:18px}
+  header{padding:70px 20px 50px;text-align:center;background:linear-gradient(160deg,#1d2a4a,#2d6cdf);color:#fff}
+  header h1{font-size:2.5em;margin:0 0 10px;line-height:1.15}
+  header p{max-width:760px;margin:10px auto;color:#dfe7fb;font-size:1.05em}
+  .authors{font-family:Helvetica,Arial,sans-serif;font-size:.9em;color:#bcd0f7;letter-spacing:.03em}
+  nav{position:sticky;top:0;background:rgba(251,250,247,.96);border-bottom:1px solid var(--line);z-index:10;font-family:Helvetica,Arial,sans-serif;font-size:.82em;text-align:center;padding:8px 4px}
+  nav a{color:var(--muted);text-decoration:none;margin:0 9px;white-space:nowrap}
+  nav a:hover{color:var(--accent)}
+  main{max-width:900px;margin:0 auto;padding:20px}
+  section{margin:60px 0}
+  h2{font-size:1.75em;border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:0}
+  h3{font-size:1.25em;margin-top:32px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin:22px 0;box-shadow:0 2px 6px rgba(0,0,0,.03)}
+  .grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;cursor:pointer;transition:.2s}
+  .tile:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .tile .num{font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:var(--accent);font-size:1.6em}
+  .tile .more{display:none;font-size:.9em;color:var(--muted);margin-top:8px}
+  .tile.open .more{display:block}
+  .eq{background:var(--soft);border-left:4px solid var(--accent);padding:12px 18px;margin:16px 0;font-family:"Cambria Math","Times New Roman",serif;font-size:1.08em;overflow-x:auto}
+  .plain{font-size:.95em;color:var(--muted);margin-top:-6px}
+  .ctrl{font-family:Helvetica,Arial,sans-serif;font-size:.85em;display:flex;flex-wrap:wrap;gap:16px 28px;margin:10px 0 14px}
+  .ctrl label{display:flex;flex-direction:column;min-width:180px}
+  .ctrl input[type=range]{width:100%}
+  .ctrl b{color:var(--accent)}
+  button{font-family:Helvetica,Arial,sans-serif;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:.85em;cursor:pointer;margin-right:6px}
+  button.alt{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  button:hover{opacity:.9}
+  select{font-size:.95em;padding:4px}
+  .note{font-family:Helvetica,Arial,sans-serif;font-size:.78em;color:var(--muted);background:#fff7e8;border:1px solid #f1dfb6;border-radius:6px;padding:6px 10px;display:inline-block;margin:6px 0}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0}
+  .step{font-family:Helvetica,Arial,sans-serif;font-size:.8em;background:#fff;border:2px solid var(--line);border-radius:30px;padding:8px 14px;cursor:pointer}
+  .step.active{border-color:var(--accent);background:var(--accent);color:#fff}
+  #stepText{min-height:110px}
+  .who{font-family:Helvetica,Arial,sans-serif;font-size:.75em;text-transform:uppercase;letter-spacing:.06em;font-weight:bold}
+  table{border-collapse:collapse;width:100%;font-size:.92em}
+  td,th{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+  th{font-family:Helvetica,Arial,sans-serif;font-size:.8em;text-transform:uppercase;color:var(--muted)}
+  .stat{font-family:Helvetica,Arial,sans-serif;font-size:.88em;background:var(--soft);border-radius:8px;padding:8px 12px;margin:8px 0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.two{grid-template-columns:1fr} header h1{font-size:1.8em}}
+  .pill{display:inline-block;font-family:Helvetica,Arial,sans-serif;font-size:.72em;padding:2px 8px;border-radius:10px;background:var(--soft);color:var(--muted);margin-right:4px}
+  footer{text-align:center;color:var(--muted);font-size:.85em;padding:40px 20px;border-top:1px solid var(--line)}
+  .units{font-family:monospace;font-size:.9em}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="authors">Anish Agarwal · Munther Dahleh · Tuhin Sarkar — MIT · ACM EC 2019</div>
+  <h1>A Marketplace for Data:<br>An Algorithmic Solution</h1>
+  <p>How do you build a real-time market that sells <em>training data</em> for machine learning — when data can be copied for free, its value depends on what other data you have, and nobody knows in advance which dataset will actually help?</p>
+</header>
+
+<nav>
+  <a href="#problem">Problem</a><a href="#model">Model</a><a href="#props">Goals</a><a href="#truth">Truthful pricing</a><a href="#mw">Price updates</a><a href="#shapley">Fair split</a><a href="#replication">Copying attack</a><a href="#results">Results</a><a href="#limits">Limitations</a>
+</nav>
+
+<main>
+
+<section id="problem">
+<h2>1. Why selling data is hard</h2>
+<p>Businesses increasingly need machine-learning predictions, often in real time (a ride-share company setting prices, a retailer sending targeted coupons). Good predictions need good training data, which firms often can't collect themselves — and real-time data gets "stale" quickly. So the authors ask: <strong>what would a market for training data look like?</strong></p>
+<p>The paper identifies four features that make data unlike other goods. Click each to expand.</p>
+<div class="grid4">
+  <div class="tile" onclick="this.classList.toggle('open')"><div class="num">i</div><b>Freely replicable</b><div class="more">Data can be copied at zero marginal cost. You can't simply "give it to the highest bidder" the way you would a single item.</div></div>
+  <div class="tile" onclick="this.classList.toggle('open')"><div class="num">ii</div><b>Combinatorial value</b><div class="more">A dataset's worth depends on which other (possibly correlated) datasets are also available. Two near-identical datasets are not worth twice as much as one.</div></div>
+  <div class="tile" onclick="this.classList.toggle('open')"><div class="num">iii</div><b>Tasks vary wildly</b><div class="more">A 10% accuracy gain means very different things to a hedge fund maximizing profit versus a logistics company cutting inventory costs.</div></div>
+  <div class="tile" onclick="this.classList.toggle('open')"><div class="num">iv</div><b>Hard to verify upfront</b><div class="more">You can't tell if a dataset (say, satellite images) helps your specific task until you actually train a model on it.</div></div>
+</div>
+
+<h3>Why not just reuse existing online markets?</h3>
+<div class="two">
+<div class="card"><span class="pill">Online ad auctions</span><p>Ad space is <em>not</em> replicable — one ad per slot — so a second-price auction to the highest bidder works. Advertisers also have strong priors (e.g. historical click-through rates). Data buyers have neither: data is copyable, and they have no prior on how useful a particular dataset is for their task.</p></div>
+<div class="card"><span class="pill">Prediction markets</span><p>"Experts" sell probability forecasts for a specific variable and get paid when the outcome is revealed. But they must choose which tasks to predict. A data seller (e.g. a store selling foot-traffic) cannot know which buyer's task its data will help.</p></div>
+</div>
+<p>What's needed is a market that <strong>matches prediction tasks to datasets based on which data, collectively, is empirically most predictive — and cheap enough for the buyer.</strong></p>
+
+<div class="card">
+<div class="who" style="color:var(--accent2)">Running example: inventory optimization</div>
+<p>Sellers are retail stores selling anonymized minute-by-minute foot-traffic streams. Buyers are logistics companies wanting to forecast inventory demand. A logistics company can't sensibly bid on each store's stream — but it <em>does</em> know its cost model for bad forecasts, so it can say: <em>"I'm willing to pay $1000 for each percentage-point increase in forecasting accuracy."</em> That single number is the key to the whole design.</p>
+</div>
+</section>
+
+<section id="model">
+<h2>2. The model: who's in the market</h2>
+<div class="two">
+<div class="card"><div class="who" style="color:var(--green)">M Sellers</div>
+<p>Each seller <i>j</i> supplies one feature <b>X<sub>j</sub></b> — a data vector of length T (e.g. one store's foot-traffic time series). Sellers can't improve their data's quality, don't know the buyers' tasks, have no privacy concerns (data is assumed anonymized), and simply want revenue.</p></div>
+<div class="card"><div class="who" style="color:var(--accent)">N Buyers (arriving one at a time)</div>
+<p>Buyer <i>n</i> has a prediction task <b>Y<sub>n</sub></b> (e.g. historical demand), a private value <b>μ<sub>n</sub></b> for a unit increase in accuracy, and submits a public bid <b>b<sub>n</sub></b> (which may differ from μ<sub>n</sub> if the buyer is strategic).</p></div>
+</div>
+<p>Accuracy is measured by a <strong>gain function</strong> G ∈ [0,1] (for example 1 − normalized RMSE for regression, or accuracy for classification). The buyer's value from a prediction is simply:</p>
+<div class="eq">value = μ<sub>n</sub> · G(Y<sub>n</sub>, Ŷ<sub>n</sub>)</div>
+<p class="plain">In words: "what I'm willing to pay per unit of accuracy" × "how accurate the prediction turned out". The authors flag this as a key modeling decision: buyers value <em>accuracy</em>, not particular datasets. Non-linearities (e.g. 50% accuracy on a balanced coin-flip task being worthless) can be folded into G.</p>
+
+<p>The <strong>marketplace</strong> holds a single scalar price p<sub>n</sub>, an ML algorithm M (could just be an off-the-shelf library), and four functions it must design:</p>
+<table>
+<tr><th>Function</th><th>What it does</th></tr>
+<tr><td><b>AF</b> Allocation</td><td>Given price and bid, decides the <em>quality</em> of the data the buyer gets (e.g. by adding noise).</td></tr>
+<tr><td><b>RF</b> Revenue</td><td>Decides how much to charge the buyer.</td></tr>
+<tr><td><b>PD</b> Payment division</td><td>Splits the revenue among sellers according to each feature's marginal value.</td></tr>
+<tr><td><b>PF</b> Price update</td><td>Sets the next buyer's price.</td></tr>
+</table>
+
+<h3>One round of the market — click through the steps</h3>
+<div class="flow" id="flow"></div>
+<div class="card" id="stepText"></div>
+<p class="plain"><b>A nice side-effect (Remark 2.4):</b> buyers never see the raw features — they only receive predictions from a model trained on them. This sidesteps sellers' fear that once data is released, it can be copied endlessly.</p>
+</section>
+
+<section id="props">
+<h2>3. What a good data market must achieve</h2>
+<div class="grid4">
+  <div class="tile" onclick="this.classList.toggle('open')"><div class="num">✓</div><b>Truthful</b><div class="more">Bidding your real value μ<sub>n</sub> should be the best strategy: μ<sub>n</sub> = argmax<sub>z</sub> U(z, Y<sub>n</sub>).</div></div>
+  <div class="tile" onclick="this.classList.toggle('open')"><div class="num">$</div><b>Revenue maximizing</b><div class="more">Over a worst-case sequence of buyers (no distributional assumptions), average revenue should approach that of the best fixed price in hindsight — i.e. average regret → 0.</div></div>
+  <div class="tile" onclick="this.classList.toggle('open')"><div class="num">⚖</div><b>Fair split</b><div class="more">Revenue divided by Shapley fairness (balance, symmetry, zero element, additivity) — <em>and</em> robust to sellers copying their data.</div></div>
+  <div class="tile" onclick="this.classList.toggle('open')"><div class="num">⚡</div><b>Efficient</b><div class="more">Each step runs in polynomial time in M (number of sellers) and doesn't grow with N (buyers seen so far).</div></div>
+</div>
+<p>The tension: combinatorial goods usually make these goals blow up exponentially. Exact Shapley values cost Θ(2<sup>M</sup>); a naive Multiplicative Weights over per-dataset price vectors costs Θ(exp(M)); and prior work shows regret minimization for even simple non-additive valuations is computationally intractable.</p>
+<p><strong>The key simplification:</strong> keep one scalar price for <em>all</em> the data, and treat the data on sale as a single pool of "information" whose quality is turned up or down. Because buyers are described by a scalar μ<sub>n</sub>, a scalar price is natural.</p>
+</section>
+
+<section id="truth">
+<h2>4. Allocation and pricing that make honesty optimal</h2>
+<h3>Allocation: degrade data when the bid is below the price</h3>
+<p>If the bid b<sub>n</sub> ≥ price p<sub>n</sub>, the buyer gets the data untouched. If b<sub>n</sub> &lt; p<sub>n</sub>, the data is degraded in proportion to the gap. Two examples from the paper:</p>
+<div class="eq">Real-valued data: &nbsp; X̃<sub>j</sub>(t) = X<sub>j</sub>(t) + max(0, p<sub>n</sub> − b<sub>n</sub>) · N(0, σ²)</div>
+<div class="eq">Binary data: &nbsp; X̃<sub>j</sub>(t) = B(t; θ) · X<sub>j</sub>(t), &nbsp; θ = min(b<sub>n</sub>/p<sub>n</sub>, 1) &nbsp;(random masking)</div>
+<p class="plain">Either way: bid less than the price, and you get noisier data, hence a worse prediction.</p>
+
+<h3>Revenue: Myerson's payment rule</h3>
+<p>Let h(z) be the accuracy the buyer would get if they bid z (with price fixed). The charge is:</p>
+<div class="eq">RF*(p<sub>n</sub>, b<sub>n</sub>, Y<sub>n</sub>) = b<sub>n</sub> · h(b<sub>n</sub>) &nbsp;−&nbsp; ∫<sub>0</sub><sup>b<sub>n</sub></sup> h(z) dz</div>
+<p class="plain">In words: start with "your bid × the accuracy you got" (the rectangle), then refund the area under the accuracy curve up to your bid. What you pay is the sliver <em>above</em> the curve. Theorem 5.1: as long as more bid never means worse accuracy (Assumption 1, monotonicity), this makes bidding your true μ<sub>n</sub> optimal — and truthfulness is achievable <em>only if</em> that monotonicity holds.</p>
+
+<div class="card">
+<b>Try it: can you beat honesty?</b>
+<div class="note">Illustrative toy: accuracy h(z) = G<sub>max</sub> if z ≥ p, else G<sub>max</sub>/(1 + k(p−z)²). Not from the paper's data — just a monotone curve to visualize the rule.</div>
+<div class="ctrl">
+  <label>Price p: <b id="pV"></b><input type="range" id="pS" min="1" max="9" step="0.1" value="5"></label>
+  <label>Your true value μ: <b id="muV"></b><input type="range" id="muS" min="0" max="10" step="0.1" value="6.5"></label>
+  <label>Your bid b: <b id="bV"></b><input type="range" id="bS" min="0" max="10" step="0.1" value="4"></label>
+  <label>Data usefulness G<sub>max</sub>: <b id="gV"></b><input type="range" id="gS" min="0.1" max="1" step="0.05" value="0.8"></label>
+</div>
+<div class="two">
+  <div id="plotH" style="height:320px"></div>
+  <div id="plotU" style="height:320px"></div>
+</div>
+<div class="stat" id="truthStat"></div>
+</div>
+
+<p><strong>Why not just a take-it-or-leave-it price?</strong> Myerson's classic result says that for single-parameter buyers, one posted price is optimal. The paper points out this fails here because buyers are also characterized by their task Y<sub>n</sub>: if dataset X<sub>1</sub> only helps task Y<sub>1</sub> and X<sub>2</sub> only helps Y<sub>2</sub>, the optimal scheme prices them differently at μ<sub>1</sub> and μ<sub>2</sub>. Finding the revenue-optimal allocation function is left open.</p>
+</section>
+
+<section id="mw">
+<h2>5. Learning the right price over time</h2>
+<p>The price must be fixed <em>before</em> each buyer arrives (otherwise truthfulness breaks). Too high a price → data gets heavily degraded → the "b·h(b)" term shrinks. Too low → the refund integral is large. Either way revenue is lost.</p>
+<p><strong>Algorithm 1</strong> uses <em>Multiplicative Weights</em>: lay a grid of candidate prices (an ε-net of the bid range) — each one an "expert". Pick a price at random in proportion to its weight. After the buyer's bid arrives, compute what each candidate price <em>would have earned</em>, and boost its weight:</p>
+<div class="eq">w<sub>i</sub> ← w<sub>i</sub> · (1 + δ · RF*(c<sub>i</sub>, b<sub>n</sub>, Y<sub>n</sub>) / B<sub>max</sub>)</div>
+<p class="plain">Prices that would have earned more grow in weight and get chosen more often. Theorem 5.2 bounds the average regret against the best fixed price in hindsight by O(√(log N / N)) — it goes to zero, and crucially the bound does <em>not</em> depend on the number of sellers M.</p>
+
+<div class="card">
+<b>Simulation: watch the market learn a price</b>
+<div class="note">Toy simulation using the same illustrative accuracy curve. Buyers bid truthfully; their μ and data usefulness are drawn at random from the population you pick.</div>
+<div class="ctrl">
+  <label>Buyers N: <b id="nV"></b><input type="range" id="nS" min="100" max="4000" step="100" value="1500"></label>
+  <label>Price-grid spacing ε: <b id="eV"></b><input type="range" id="eS" min="0.25" max="2" step="0.25" value="0.5"></label>
+  <label>Buyer population
+    <select id="popS">
+      <option value="u">Uniform values 0–10</option>
+      <option value="hi">Mostly high-value buyers</option>
+      <option value="mix">Two groups (low &amp; high)</option>
+    </select></label>
+</div>
+<button onclick="runMW()">Run simulation</button>
+<div class="two">
+  <div id="plotW" style="height:320px"></div>
+  <div id="plotR" style="height:320px"></div>
+</div>
+<div class="stat" id="mwStat"></div>
+</div>
+</section>
+
+<section id="shapley">
+<h2>6. Splitting the revenue fairly among sellers</h2>
+<p>The buyer pays one lump sum for an accuracy gain. How much of it does each store's data deserve?</p>
+<h3>The naive idea fails: leave-one-out</h3>
+<p>"Value of feature m = accuracy with everything − accuracy without m." With two identical features, removing either loses nothing, so both get <strong>zero</strong> — even if together they're very predictive.</p>
+<h3>Shapley values</h3>
+<p>The Shapley value (the unique split satisfying balance, symmetry, zero-element and additivity) averages a feature's marginal contribution over every possible order in which features could be added:</p>
+<div class="eq">ψ(m) = Σ<sub>T ⊆ [M]∖{m}</sub> &nbsp; |T|!(M−|T|−1)! / M! &nbsp;·&nbsp; [ G(with T ∪ {m}) − G(with T) ]</div>
+<p class="plain">In words: imagine sellers joining in a random order; pay each seller the average accuracy bump they bring when they join. Exact computation takes Θ(2<sup>M</sup>) — hopeless for many sellers.</p>
+<p><strong>Algorithm 2 (Shapley-Approx)</strong> instead samples K random orderings and averages. Theorem 5.3: with K &gt; M·log(2/δ)/(2ε²), the estimate is within ε of the true Shapley value for every feature, with probability 1−δ.</p>
+
+<div class="card">
+<b>Playground: leave-one-out vs. exact Shapley vs. sampled Shapley</b>
+<div class="note">Toy value function: each feature carries some "units of information" (shown in brackets); accuracy G = fraction of the 6 relevant units covered by the features used. Overlap = correlation.</div>
+<div class="ctrl">
+  <label>Scenario
+    <select id="scS">
+      <option value="ov">Overlapping stores</option>
+      <option value="tw">Identical twins + one unique</option>
+      <option value="ind">All independent</option>
+      <option value="junk">One useless feature</option>
+    </select></label>
+  <label>Sampled orderings K: <b id="kV"></b><input type="range" id="kS" min="1" max="300" step="1" value="10"></label>
+</div>
+<div id="unitsBox" class="units"></div>
+<button class="alt" onclick="drawShap()">Resample</button>
+<div id="plotS" style="height:340px"></div>
+<div class="stat" id="shapStat"></div>
+</div>
+
+<div class="card">
+<b>How many samples does the theory ask for?</b> &nbsp;K &gt; M·log(2/δ) / (2ε²)
+<div class="ctrl">
+  <label>Sellers M: <b id="mV"></b><input type="range" id="mS" min="2" max="1000" step="1" value="100"></label>
+  <label>Accuracy ε: <b id="epV"></b><input type="range" id="epS" min="0.01" max="0.2" step="0.01" value="0.05"></label>
+  <label>Failure prob. δ: <b id="dV"></b><input type="range" id="dS" min="0.001" max="0.2" step="0.001" value="0.05"></label>
+</div>
+<div class="stat" id="kStat"></div>
+</div>
+</section>
+
+<section id="replication">
+<h2>7. The copying attack — and a new kind of fairness</h2>
+<p>Here's a problem specific to freely replicable goods. Two sellers, A and B, sell identical data. Shapley gives each ½. Now A uploads a copy of her own data under a new name. Accuracy doesn't change (the copy adds no information), so the buyer pays the same — but Shapley now sees three identical features and gives A two of them: <strong>A gets ⅔, B drops to ⅓.</strong> Copying is free, so this is a disaster.</p>
+<p>The paper's new property, <strong>robustness to replication</strong> (Property 3.4): a seller's total payout across the original and all copies must not exceed (up to ε) what they'd get without copying.</p>
+<p><strong>Algorithm 3 (Shapley-Robust)</strong> exploits a special feature of data: you can measure how similar two datasets are (e.g. cosine similarity). It shrinks each feature's approximate Shapley value by its total similarity to all other features:</p>
+<div class="eq">ψ(m) = ψ̂(m) · exp( −λ · Σ<sub>j ≠ m</sub> SM(X<sub>m</sub>, X<sub>j</sub>) )</div>
+<p class="plain">In words: the more your data resembles other data on sale, the more your share is discounted. Copies are maximally similar to each other, so copying is penalized; unique data is barely touched.</p>
+
+<div class="card">
+<b>Try the attack.</b> Seller A and seller B hold identical data. Choose how many extra copies A uploads.
+<div class="ctrl">
+  <label>Extra copies by A: <b id="cV"></b><input type="range" id="cS" min="0" max="6" step="1" value="1"></label>
+  <label>Penalty strength λ: <b id="lV"></b><input type="range" id="lS" min="0" max="2" step="0.05" value="1"></label>
+</div>
+<div class="two">
+  <div id="plotA" style="height:320px"></div>
+  <div id="plotA2" style="height:320px"></div>
+</div>
+<div class="stat" id="repStat"></div>
+<p class="plain">With λ = 1 and one copy, A's payout falls from 1/(2e) to 2/(3e²), matching the paper's Example 4.5.</p>
+</div>
+
+<h3>How strong must the penalty be?</h3>
+<p>In the proof of Theorem 5.4, robustness boils down to requiring c · e<sup>−λ(c−1)</sup> ≤ 1 for every number of copies c — which holds when λ = log 2. More generally, Proposition 5.2 says a penalty function f (of a feature's total similarity x) is robust if and only if</p>
+<div class="eq">(c + 1) · f(x + c) ≤ f(x) &nbsp;&nbsp; for all copies c ∈ {1,2,…}</div>
+<p class="plain">In words: making c extra copies multiplies your number of payout slots by c+1, so the penalty must shrink each slot by at least that factor. An appendix argument suggests exponential penalties are, loosely, the "least harsh" ones that work.</p>
+<div class="card">
+<div class="ctrl"><label>λ: <b id="l2V"></b><input type="range" id="l2S" min="0.1" max="1.5" step="0.01" value="0.69"></label></div>
+<div id="plotPen" style="height:280px"></div>
+<div class="stat" id="penStat"></div>
+</div>
+
+<h3>An impossibility</h3>
+<p><strong>Proposition 5.1:</strong> if seller identities are anonymous, you cannot have both <em>balance</em> (payouts sum exactly to the revenue) and robustness to replication. Why? The market cannot tell "A plus A's copy plus B" apart from "three honest sellers A, B, C with identical data". Balance forces ⅓ each in the second case, so it must also give A ⅔ in the first. Algorithm 3 therefore keeps symmetry, zero-element and additivity (to ε precision) but gives up exact balance — some revenue goes unallocated when data is redundant.</p>
+<p>A side benefit: because penalties are "local", sellers are nudged to provide data that is predictive for many tasks and <em>uncorrelated</em> with what's already on sale.</p>
+</section>
+
+<section id="results">
+<h2>8. Main results at a glance</h2>
+<p>This is a theory paper: the results are proofs, not experiments. Under four assumptions — (1) more noise never improves accuracy, (2) duplicated features don't change accuracy, (3) revenue is Lipschitz in price, (4) bids are bounded —</p>
+<table>
+<tr><th>Result</th><th>Statement</th><th>Plain meaning</th></tr>
+<tr><td>Theorem 5.1</td><td>Truthfulness achievable iff Assumption 1 holds; RF* then guarantees it.</td><td>Bidding your real value is optimal.</td></tr>
+<tr><td>Theorem 5.2</td><td>Average regret ≤ C·B<sub>max</sub>·√(log(B<sub>max</sub>L√N)/N) = O(√(log N / N)), with ε = 1/(L√N), δ = √(log|B<sub>net</sub>|/N).</td><td>Price learning catches up with the best fixed price; doesn't depend on M.</td></tr>
+<tr><td>Theorem 5.3</td><td>K &gt; M log(2/δ)/(2ε²) samples ⇒ ‖ψ<sub>shapley</sub> − ψ̂‖<sub>∞</sub> &lt; ε w.p. 1−δ.</td><td>Sampled Shapley is accurate without 2<sup>M</sup> work.</td></tr>
+<tr><td>Theorem 5.4</td><td>With K ≥ M log(2/δ)/(2(ε/3)²), λ = log 2, Algorithm 3 is ε-robust to replication; Shapley conditions 2–4 hold to ε.</td><td>Copying your data doesn't pay.</td></tr>
+<tr><td>Prop. 5.1</td><td>Balance and robustness can't both hold with anonymous sellers.</td><td>A fundamental trade-off.</td></tr>
+<tr><td>Corollary 5.1</td><td>AF*, RF*, PF* run in O(M); PD*<sub>a</sub>, PD*<sub>b</sub> run in O(M²).</td><td>Fast enough for real-time; revenue splitting can even run offline.</td></tr>
+</table>
+<p>The authors also suggest the permutation-sampling approach to Shapley values, with its finite-sample guarantee, could serve as a model-agnostic tool for <strong>feature importance</strong> in ML generally — and that the replication-robust fairness idea applies to other digital goods, such as battery-cost attribution among smartphone apps or rewarding experts in prediction markets.</p>
+</section>
+
+<section id="limits">
+<h2>9. Limitations and open questions</h2>
+<div class="card">
+<ul>
+<li><b>Single scalar price, fixed degradation.</b> All features are degraded by the same scaling. An adaptive allocation function tuned to prediction tasks might earn more; the optimal allocation function is left open (Remark 4.2).</li>
+<li><b>Myopic buyers.</b> Each buyer visits once; multi-stage strategic behavior isn't studied (Remark 2.6).</li>
+<li><b>No exclusivity externalities.</b> A hedge fund might pay a premium for a dataset that only <em>it</em> gets; the model ignores how a buyer's utility depends on who else receives the data (Remark 2.7).</li>
+<li><b>Simplified sellers.</b> Sellers can't improve data quality, have no privacy concerns, and incur no acquisition cost. Incorporating privacy, feedback and costs is future work.</li>
+<li><b>Buyers can't alter their task.</b> Truthfulness assumes buyers report Y<sub>n</sub> honestly; only the bid is strategic.</li>
+<li><b>Balance is sacrificed.</b> The robust split doesn't distribute all revenue; which robust mechanism is "most balance-preserving" is open.</li>
+<li><b>Centralized pricing.</b> The market, not individual sellers, sets prices (Remark 2.5) — a modeling choice made for tractability.</li>
+<li><b>Theory only.</b> Guarantees are proved under the stated assumptions; the paper does not report empirical evaluations.</li>
+</ul>
+</div>
+</section>
+
+</main>
+<footer>Interactive explainer of Agarwal, Dahleh &amp; Sarkar, "A Marketplace for Data: An Algorithmic Solution", ACM EC 2019 (arXiv:1805.08125). Toy simulations are illustrative only.</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const PL={margin:{l:50,r:15,t:40,b:45},font:{family:'Helvetica,Arial,sans-serif',size:12},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#fff',legend:{orientation:'h',y:-0.22}};
+const CFG={displayModeBar:false,responsive:true};
+
+/* ---------- Flow steps ---------- */
+const steps=[
+ ["1. Set price","Market","The marketplace sets the price p<sub>n</sub> using what it learned from earlier buyers (price-update function PF). Crucially, this happens <em>before</em> the buyer shows up."],
+ ["2. Buyer arrives","Buyer","A logistics company arrives with its prediction task Y<sub>n</sub>: its historical inventory demand."],
+ ["3. Buyer bids","Buyer","It bids b<sub>n</sub>: what a unit increase in forecasting accuracy is worth (e.g. \"$1000 per percentage point\"). It picks the bid that maximizes its utility."],
+ ["4. Allocate data","Market","The allocation function AF hands over foot-traffic streams — at full quality if the bid is at least the price, otherwise with noise added in proportion to the gap."],
+ ["5. Train & predict","Market","An ML model is trained on the allocated streams and the buyer's demand history. The buyer receives predictions, with accuracy G(Y<sub>n</sub>, Ŷ<sub>n</sub>) — measured e.g. on held-out test data."],
+ ["6. Charge","Market","The revenue function RF collects payment based only on the accuracy actually achieved."],
+ ["7. Pay sellers","Sellers","The payment division function PD splits the revenue among the retail stores according to each stream's marginal contribution. Then the price is updated for the next buyer."]
+];
+const flow=$('flow');
+steps.forEach((s,i)=>{const d=document.createElement('div');d.className='step';d.innerHTML=s[0];d.onclick=()=>showStep(i);flow.appendChild(d);});
+function showStep(i){[...flow.children].forEach((c,j)=>c.classList.toggle('active',i===j));
+ const s=steps[i];const col=s[1]==='Buyer'?'var(--accent)':s[1]==='Sellers'?'var(--green)':'var(--accent2)';
+ $('stepText').innerHTML=`<div class="who" style="color:${col}">${s[1]}</div><h3 style="margin-top:4px">${s[0]}</h3><p>${s[2]}</p><button class="alt" onclick="showStep(${(i+1)%7})">Next step →</button>`;}
+showStep(0);
+
+/* ---------- Toy accuracy curve + Myerson ---------- */
+const K_CURVE=0.4;
+function h(z,p,g){return z>=p?g:g/(1+K_CURVE*(p-z)*(p-z));}
+function intH(b,p,g){ // closed-form integral of h from 0 to b
+  const s=Math.sqrt(K_CURVE);
+  if(b<=p) return g/s*(Math.atan(s*p)-Math.atan(s*(p-b)));
+  return g/s*Math.atan(s*p)+g*(b-p);
+}
+function RF(p,b,g){return Math.max(0,b*h(b,p,g)-intH(b,p,g));}
+function util(mu,b,p,g){return mu*h(b,p,g)-RF(p,b,g);}
+
+function drawTruth(){
+ const p=+$('pS').value,mu=+$('muS').value,b=+$('bS').value,g=+$('gS').value;
+ $('pV').textContent=p;$('muV').textContent=mu;$('bV').textContent=b;$('gV').textContent=g;
+ const zs=[],hs=[];for(let z=0;z<=10.001;z+=0.05){zs.push(z);hs.push(h(z,p,g));}
+ const hb=h(b,p,g);
+ const fx=[],fy=[],fy2=[];for(let z=0;z<=b+1e-9;z+=0.05){fx.push(z);fy.push(h(z,p,g));fy2.push(hb);}
+ Plotly.react('plotH',[
+  {x:fx,y:fy,mode:'lines',line:{width:0},showlegend:false,hoverinfo:'skip'},
+  {x:fx,y:fy2,mode:'lines',fill:'tonexty',fillcolor:'rgba(226,115,59,0.35)',line:{color:'#e2733b',width:1},name:'Payment (area above curve)'},
+  {x:fx,y:fy,mode:'lines',fill:'tozeroy',fillcolor:'rgba(45,108,223,0.12)',line:{width:0},name:'Refunded area ∫h'},
+  {x:zs,y:hs,mode:'lines',line:{color:'#2d6cdf',width:3},name:'Accuracy h(z)'},
+ ],{...PL,title:'Accuracy vs. bid (price fixed)',xaxis:{title:'bid z',range:[0,10]},yaxis:{title:'accuracy G',range:[0,1.05]},
+   shapes:[{type:'line',x0:p,x1:p,y0:0,y1:1.05,line:{dash:'dot',color:'#888'}}],
+   annotations:[{x:p,y:1.02,text:'price',showarrow:false,font:{size:10,color:'#666'}}]},CFG);
+ const us=zs.map(z=>util(mu,z,p,g));
+ Plotly.react('plotU',[
+  {x:zs,y:us,mode:'lines',line:{color:'#2e9e6a',width:3},name:'Utility'},
+  {x:[b],y:[util(mu,b,p,g)],mode:'markers',marker:{size:12,color:'#e2733b'},name:'Your bid'},
+  {x:[mu],y:[util(mu,mu,p,g)],mode:'markers',marker:{size:12,color:'#2d6cdf',symbol:'star'},name:'Truthful bid (b=μ)'}
+ ],{...PL,title:'Your utility vs. bid',xaxis:{title:'bid z',range:[0,10]},yaxis:{title:'μ·h(z) − payment'}},CFG);
+ const uB=util(mu,b,p,g),uT=util(mu,mu,p,g);
+ $('truthStat').innerHTML=`Your bid b=${b}: accuracy ${hb.toFixed(3)}, you pay <b>${RF(p,b,g).toFixed(3)}</b>, utility <b>${uB.toFixed(3)}</b>. &nbsp; Bidding truthfully (b=μ=${mu}) gives utility <b>${uT.toFixed(3)}</b>. `+
+  (uT>=uB-1e-9?`<span style="color:#2e9e6a">✔ Honesty is at least as good.</span>`:'');
+}
+['pS','muS','bS','gS'].forEach(id=>$(id).addEventListener('input',drawTruth));
+drawTruth();
+
+/* ---------- Multiplicative weights ---------- */
+function sampleBuyer(pop){
+ let mu;
+ if(pop==='u') mu=Math.random()*10;
+ else if(pop==='hi') mu=Math.min(10,6+Math.random()*4*Math.random()+Math.random()*1.5);
+ else mu=Math.random()<0.5?1+Math.random()*2:7+Math.random()*2;
+ const g=0.4+0.6*Math.random();
+ return {mu,g};
+}
+function runMW(){
+ const N=+$('nS').value,eps=+$('eS').value,pop=$('popS').value,Bmax=10;
+ const net=[];for(let c=0;c<=Bmax+1e-9;c+=eps)net.push(+c.toFixed(3));
+ const n=net.length,delta=Math.sqrt(Math.log(n)/N);
+ let w=new Array(n).fill(1);
+ const cumFixed=new Array(n).fill(0);let cumAlg=0;
+ const xs=[],regret=[],avgAlg=[];
+ for(let t=1;t<=N;t++){
+  const {mu,g}=sampleBuyer(pop);const b=mu; // truthful bid
+  const W=w.reduce((a,c)=>a+c,0);
+  // expected revenue of algorithm (expectation over its random price)
+  let expRev=0;const gains=net.map(c=>RF(c,b,g));
+  for(let i=0;i<n;i++) expRev+=w[i]/W*gains[i];
+  cumAlg+=expRev;
+  for(let i=0;i<n;i++){cumFixed[i]+=gains[i];w[i]*=1+delta*gains[i]/Bmax;}
+  const mx=Math.max(...w);w=w.map(v=>v/mx);
+  if(t%Math.max(1,Math.floor(N/200))===0||t===N){xs.push(t);regret.push((Math.max(...cumFixed)-cumAlg)/t);avgAlg.push(cumAlg/t);}
+ }
+ const W=w.reduce((a,c)=>a+c,0);
+ const best=cumFixed.indexOf(Math.max(...cumFixed));
+ Plotly.react('plotW',[{x:net,y:w.map(v=>v/W),type:'bar',marker:{color:net.map((c,i)=>i===best?'#e2733b':'#2d6cdf')}}],
+  {...PL,title:'Final probability of each candidate price',xaxis:{title:'price c_i'},yaxis:{title:'probability'}},CFG);
+ Plotly.react('plotR',[{x:xs,y:regret,mode:'lines',line:{color:'#e2733b',width:3},name:'Average regret'}],
+  {...PL,title:'Average regret vs. buyers seen',xaxis:{title:'buyers n'},yaxis:{title:'(best fixed − algorithm)/n',rangemode:'tozero'}},CFG);
+ $('mwStat').innerHTML=`Grid of ${n} candidate prices, δ = ${delta.toFixed(3)}. Best fixed price in hindsight: <b>${net[best]}</b> (orange bar), earning ${(cumFixed[best]/N).toFixed(3)} per buyer. The algorithm earned ${(cumAlg/N).toFixed(3)} per buyer on average. Final average regret: <b>${regret[regret.length-1].toFixed(4)}</b> — it shrinks as more buyers arrive.`;
+}
+['nS','eS'].forEach(id=>$(id).addEventListener('input',()=>{$('nV').textContent=$('nS').value;$('eV').textContent=$('eS').value;}));
+$('nV').textContent=$('nS').value;$('eV').textContent=$('eS').value;
+runMW();
+
+/* ---------- Shapley playground ---------- */
+const scen={
+ ov:{A:[1,2,3],B:[3,4],C:[4,5],D:[6]},
+ tw:{A:[1,2,3],B:[1,2,3],C:[4,5,6]},
+ ind:{A:[1,2],B:[3],C:[4,5],D:[6]},
+ junk:{A:[1,2,3],B:[4,5,6],C:[]}
+};
+function Gval(set,feat){const u=new Set();set.forEach(f=>feat[f].forEach(x=>u.add(x)));return u.size/6;}
+function perms(a){if(a.length<=1)return [a];const r=[];a.forEach((x,i)=>perms(a.slice(0,i).concat(a.slice(i+1))).forEach(p=>r.push([x,...p])));return r;}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function contrib(order,m,feat){const before=order.slice(0,order.indexOf(m));return Gval(before.concat([m]),feat)-Gval(before,feat);}
+function drawShap(){
+ const feat=scen[$('scS').value],K=+$('kS').value;$('kV').textContent=K;
+ const names=Object.keys(feat);
+ $('unitsBox').innerHTML=names.map(n=>`<b>${n}</b>: [${feat[n].join(', ')||'—'}]`).join(' &nbsp; ');
+ const all=perms(names);
+ const exact=names.map(m=>all.reduce((s,o)=>s+contrib(o,m,feat),0)/all.length);
+ const loo=names.map(m=>Gval(names,feat)-Gval(names.filter(x=>x!==m),feat));
+ const mc=names.map(m=>{let s=0;for(let k=0;k<K;k++)s+=contrib(shuffle(names),m,feat);return s/K;});
+ Plotly.react('plotS',[
+  {x:names,y:loo,type:'bar',name:'Leave-one-out',marker:{color:'#bbb'}},
+  {x:names,y:exact,type:'bar',name:'Exact Shapley',marker:{color:'#2d6cdf'}},
+  {x:names,y:mc,type:'bar',name:`Sampled (K=${K})`,marker:{color:'#e2733b'}}
+ ],{...PL,barmode:'group',title:'Credit assigned to each feature',yaxis:{title:'share of accuracy'}},CFG);
+ const sum=a=>a.reduce((x,y)=>x+y,0);
+ $('shapStat').innerHTML=`Total accuracy with all features: <b>${Gval(names,feat).toFixed(3)}</b>. Leave-one-out hands out ${sum(loo).toFixed(3)}; exact Shapley hands out ${sum(exact).toFixed(3)} (balance — always the full amount); max sampling error: ${Math.max(...names.map((_,i)=>Math.abs(mc[i]-exact[i]))).toFixed(3)}.`;
+}
+$('scS').addEventListener('change',drawShap);$('kS').addEventListener('input',drawShap);
+drawShap();
+
+function drawK(){const M=+$('mS').value,e=+$('epS').value,d=+$('dS').value;
+ $('mV').textContent=M;$('epV').textContent=e;$('dV').textContent=d;
+ const K=Math.ceil(M*Math.log(2/d)/(2*e*e));
+ const exact=M*Math.LN2/Math.LN10; // log10(2^M)
+ $('kStat').innerHTML=`Need K ≈ <b>${K.toLocaleString()}</b> sampled orderings per feature, ≈ ${(K*M).toLocaleString()} model evaluations overall (O(M²) scaling). Exact Shapley would sum over 2<sup>${M}</sup> ≈ 10<sup>${exact.toFixed(0)}</sup> subsets.`;}
+['mS','epS','dS'].forEach(id=>$(id).addEventListener('input',drawK));drawK();
+
+/* ---------- Replication attack ---------- */
+function drawRep(){
+ const c=+$('cS').value,lam=+$('lS').value;$('cV').textContent=c;$('lV').textContent=lam;
+ const tot=c+2; // A's (c+1) copies + B
+ const shapA=(c+1)/tot,shapB=1/tot;
+ const pen=Math.exp(-lam*(c+1)); // each feature identical to the c+1 others
+ const robA=shapA*pen,robB=shapB*pen;
+ const base=0.5*Math.exp(-lam);
+ Plotly.react('plotA',[
+  {x:['Shapley','Shapley-Robust'],y:[shapA,robA],type:'bar',name:'Seller A (all copies)',marker:{color:'#e2733b'}},
+  {x:['Shapley','Shapley-Robust'],y:[shapB,robB],type:'bar',name:'Seller B',marker:{color:'#2e9e6a'}}
+ ],{...PL,barmode:'group',title:`Payouts when A uploads ${c} extra cop${c===1?'y':'ies'}`,yaxis:{title:'share of revenue',range:[0,1]}},CFG);
+ const cs=[0,1,2,3,4,5,6];
+ Plotly.react('plotA2',[
+  {x:cs,y:cs.map(k=>(k+1)/(k+2)),mode:'lines+markers',name:'A under Shapley',line:{color:'#999'}},
+  {x:cs,y:cs.map(k=>(k+1)/(k+2)*Math.exp(-lam*(k+1))),mode:'lines+markers',name:'A under Shapley-Robust',line:{color:'#e2733b',width:3}}
+ ],{...PL,title:"A's total payout vs. number of copies",xaxis:{title:'extra copies'},yaxis:{title:'share',range:[0,1]}},CFG);
+ $('repStat').innerHTML=`No copying: A gets ${(0.5).toFixed(3)} (Shapley) / ${base.toFixed(3)} (robust). With ${c} extra cop${c===1?'y':'ies'}: A gets <b>${shapA.toFixed(3)}</b> (Shapley) / <b>${robA.toFixed(3)}</b> (robust). `+
+  (c>0?(robA<=base+1e-12?'<span style="color:#2e9e6a">✔ Copying does not pay under the robust rule.</span>':'<span style="color:#c0392b">✘ Copying pays — λ is too weak.</span>'):'')+
+  ` Note robust payouts sum to ${(robA+robB).toFixed(3)} &lt; 1: balance is sacrificed.`;
+}
+['cS','lS'].forEach(id=>$(id).addEventListener('input',drawRep));drawRep();
+
+function drawPen(){
+ const lam=+$('l2S').value;$('l2V').textContent=lam.toFixed(2);
+ const cs=[1,2,3,4,5,6,7,8];const v=cs.map(c=>c*Math.exp(-lam*(c-1)));
+ Plotly.react('plotPen',[
+  {x:cs,y:v,type:'bar',marker:{color:v.map(x=>x<=1+1e-9?'#2e9e6a':'#c0392b')},name:'c·e^{−λ(c−1)}'}
+ ],{...PL,title:'c · e^(−λ(c−1)) for c total copies (must be ≤ 1)',xaxis:{title:'c (total copies)'},yaxis:{title:'value',range:[0,4]},
+  shapes:[{type:'line',x0:0.5,x1:8.5,y0:1,y1:1,line:{dash:'dash',color:'#333'}}]},CFG);
+ const ok=v.every(x=>x<=1+1e-9);
+ $('penStat').innerHTML=ok?`✔ λ = ${lam.toFixed(2)} satisfies the condition for every c shown. (The paper picks λ = log 2 ≈ 0.693.)`:`✘ λ = ${lam.toFixed(2)} is too small: some copy count c would let a seller profit. Threshold is λ = log 2 ≈ 0.693.`;
+}
+$('l2S').addEventListener('input',drawPen);drawPen();
+</script>
+</body>
+</html>

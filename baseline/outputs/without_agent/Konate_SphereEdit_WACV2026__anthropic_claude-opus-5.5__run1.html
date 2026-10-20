@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SphereEdit Explained: Spherical Semantic Editing in Diffusion Models</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+:root{
+  --bg:#0f1220; --panel:#171b2e; --panel2:#1e2340; --ink:#e8eaf6; --muted:#a3a9c9;
+  --a:#ff7a59; --b:#4fc3f7; --c:#b388ff; --good:#69f0ae; --warn:#ffd54f; --line:#2c3260;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.65}
+a{color:var(--b)}
+header{padding:70px 20px 50px;text-align:center;background:radial-gradient(ellipse at top,#2a2f63 0%,var(--bg) 70%)}
+header h1{font-size:clamp(2rem,5vw,3.3rem);margin:0 0 10px;letter-spacing:-.5px}
+header h1 span{background:linear-gradient(90deg,var(--a),var(--c),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+header p.sub{font-size:1.15rem;color:var(--muted);max-width:760px;margin:0 auto 18px}
+.authors{font-size:.9rem;color:var(--muted)}
+nav{position:sticky;top:0;z-index:10;background:rgba(15,18,32,.93);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding:8px}
+nav a{color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:14px;font-size:.88rem}
+nav a:hover{background:var(--panel2);color:var(--ink)}
+main{max-width:980px;margin:0 auto;padding:20px}
+section{margin:50px 0}
+h2{font-size:1.8rem;margin-bottom:6px}
+h2 .num{color:var(--c);font-weight:400;margin-right:8px}
+h3{margin-top:28px;color:#cfd3f5}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin:18px 0}
+.callout{border-left:4px solid var(--c);background:var(--panel2);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0}
+.callout.warn{border-color:var(--warn)}
+.toy{font-size:.8rem;color:var(--warn);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.eq{font-family:"Cambria Math",Georgia,serif;font-size:1.15rem;background:#0b0e1a;padding:10px 14px;border-radius:8px;text-align:center;margin:10px 0;overflow-x:auto}
+.plain{color:var(--muted);font-size:.95rem}
+input[type=range]{width:100%;accent-color:var(--c)}
+label{font-size:.9rem;color:var(--muted)}
+.val{font-family:monospace;color:var(--ink)}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+button{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:7px 13px;border-radius:8px;cursor:pointer;font-size:.9rem}
+button.on,button:hover{border-color:var(--c);background:#2b2457}
+.steps{display:flex;gap:8px;flex-wrap:wrap}
+.step{flex:1 1 150px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;text-align:center;font-size:.9rem;transition:.2s}
+.step b{display:block;font-size:1.4rem;color:var(--c)}
+.step.on{border-color:var(--c);background:#2b2457;transform:translateY(-2px)}
+#stepDetail{min-height:150px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:7px 6px;text-align:center;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600}
+td.best{color:var(--good);font-weight:700}
+tr.ours td:first-child{color:var(--c);font-weight:700}
+.bar{height:16px;border-radius:4px;transition:width .2s}
+.lamrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.9rem}
+.lamrow .lbl{width:110px}
+.lamrow .track{flex:1;height:16px;background:#0b0e1a;border-radius:4px;position:relative;overflow:hidden}
+.lamrow .track .mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:#555}
+.lamrow .fill{position:absolute;top:0;bottom:0}
+.lamrow .v{width:60px;text-align:right;font-family:monospace}
+canvas{max-width:100%;display:block;margin:0 auto;background:#0b0e1a;border-radius:10px}
+.lim li{margin-bottom:10px}
+footer{text-align:center;color:var(--muted);font-size:.85rem;padding:40px 20px;border-top:1px solid var(--line)}
+.chip{display:inline-block;padding:2px 9px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);font-size:.82rem;margin:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>SphereEdit</span></h1>
+  <p class="sub">Spherical Semantic Editing in Diffusion Models: editing images by turning knobs on a sphere, with no training and no optimization.</p>
+  <div class="authors">Salamata Konate, Hassan Hamidi, Elham Dolatabadi, Frank Rudzicz, Laleh Seyyed-Kalantari<br>York University · Vector Institute · Dalhousie University · CIFAR | WACV (Open Access version)</div>
+</header>
+
+<nav>
+  <a href="#problem">Problem</a><a href="#idea">Key idea</a><a href="#method">Method</a><a href="#angles">Angular control</a><a href="#mask">Masking</a><a href="#ortho">Disentangling</a><a href="#results">Results</a><a href="#ablation">Ablations</a><a href="#limits">Limitations</a>
+</nav>
+
+<main>
+
+<section id="problem">
+<h2><span class="num">01</span>The problem: edits that leak</h2>
+<p>Diffusion models such as Stable Diffusion can make photorealistic images from text. Users often want to <em>edit</em> an existing image instead, for example by adding glasses, making someone look older, or turning a truck into a cartoon. Such an edit should be:</p>
+<div class="grid2">
+  <div class="panel"><b>Identity-preserving</b><br><span class="plain">Adding lipstick should not change skin tone. Adding eyeglasses should not reshape the face.</span></div>
+  <div class="panel"><b>Fast &amp; controllable</b><br><span class="plain">No slow per-image optimization, and no trial-and-error prompt tinkering.</span></div>
+</div>
+<p>The paper groups existing approaches and the problems each one has:</p>
+<ul>
+  <li><b>Optimization and inversion methods</b> are slow, sensitive to the exact prompt, and prone to <em>identity drift</em>.</li>
+  <li><b>Linear latent operations</b> treat an attribute as a global shift. Edits leak into unrelated regions and don't combine cleanly.</li>
+  <li><b>Prompt- and attention-rewiring methods</b> rely on layer- or head-specific heuristics with weak spatial grounding. This causes <em>edit bleeding</em>, for example "lipstick" altering the cheeks.</li>
+</ul>
+<div class="callout">The authors' diagnosis: existing methods capture <b>either</b> the global geometry of the model's representations <b>or</b> where the text condition applies in the image, but <b>not both</b>.</div>
+</section>
+
+<section id="idea">
+<h2><span class="num">02</span>The key idea: attributes are directions on a sphere</h2>
+<p>SphereEdit treats each semantic attribute ("glasses", "old", "cartoon"…) as a <b>unit-length arrow</b> (a direction) in the space of the denoiser's predictions. Since every arrow has length 1, all of them point to locations on a unit sphere. This viewpoint brings three useful properties:</p>
+<div class="grid2">
+  <div class="panel"><b style="color:var(--a)">↔ Antipodal symmetry</b><br><span class="plain">The opposite direction gives roughly the opposite meaning: "old" is approximately the negation of "young". One arrow therefore supports both adding and removing an attribute.</span></div>
+  <div class="panel"><b style="color:var(--b)">⊥ Approximate orthogonality</b><br><span class="plain">Different attributes point in roughly perpendicular directions, so they can be combined without interfering much.</span></div>
+  <div class="panel"><b style="color:var(--c)">◐ Angular mixing</b><br><span class="plain">Rotating an angle trades one attribute against another smoothly, with bounded overall strength.</span></div>
+  <div class="panel"><b style="color:var(--good)">⌖ Attention-based localization</b><br><span class="plain">Cross-attention maps show <em>where</em> each attribute belongs (glasses near the eyes, beard on the lower face), so each edit stays in its region.</span></div>
+</div>
+<p>The whole procedure runs at inference time. Nothing is retrained or fine-tuned, so it is <b>plug-and-play</b>.</p>
+</section>
+
+<section id="method">
+<h2><span class="num">03</span>The method, step by step</h2>
+<p>Image diffusion works by repeatedly <em>denoising</em>. At each step a network (a UNet) predicts the noise in the current noisy image, and a scheduler removes some of it. SphereEdit works <b>inside every single denoising step</b>. Click through the five stages (from Figure 2 of the paper):</p>
+<div class="steps" id="steps">
+  <div class="step on" data-s="0"><b>1</b>Edit direction from two passes</div>
+  <div class="step" data-s="1"><b>2</b>Attention maps</div>
+  <div class="step" data-s="2"><b>3</b>Overlap-aware projection</div>
+  <div class="step" data-s="3"><b>4</b>Spherical mixing</div>
+  <div class="step" data-s="4"><b>5</b>Add &amp; update</div>
+</div>
+<div class="panel" id="stepDetail"></div>
+
+<h3>Background: the diffusion setup</h3>
+<p>The image is first compressed into a smaller "latent" representation <i>z</i><sub>0</sub> by a pretrained autoencoder. Noise is added according to a schedule:</p>
+<div class="eq">z<sub>t</sub> = √ᾱ<sub>t</sub> · z<sub>0</sub> + √(1 − ᾱ<sub>t</sub>) · ε,  ε ~ N(0, I)</div>
+<p class="plain">In plain words: at step <i>t</i>, the latent is a blend of the clean image and random noise. As <i>t</i> grows, the blend contains more noise and less image.</p>
+<div class="eq">ε̂ = ε<sub>θ</sub>(z<sub>t</sub>, t, c)</div>
+<p class="plain">The UNet ε<sub>θ</sub> looks at the noisy latent, the timestep, and a text embedding <i>c</i>, and guesses the noise. SphereEdit first uses <b>DDIM inversion</b> to recover the noisy trajectory of a real input image. It then <em>modifies this noise guess</em> during denoising, which steers the result toward the edit.</p>
+
+<h3>Step 1 in detail: what does the model think "glasses" looks like?</h3>
+<div class="eq">v<sub>k</sub>(t) = ε<sub>θ</sub>(z<sub>t</sub>, t, c<sub>k</sub>) − ε<sub>θ</sub>(z<sub>t</sub>, t, c<sub>∅</sub>)   then   v̂<sub>k</sub> = v<sub>k</sub> / ‖v<sub>k</sub>‖</div>
+<p class="plain">The UNet runs twice on the same noisy latent: once with the attribute text (e.g. "glasses") and once with an empty/null prompt ∅. Everything they share cancels in the subtraction. What remains is the attribute's own contribution. The result is then normalized to length 1, so a "loud" attribute doesn't overpower a "quiet" one.</p>
+<p class="plain">A binary on/off schedule <i>m<sub>k</sub>(t)</i> can also switch each attribute on only during certain steps. For example, "glasses" can be applied only at later steps, so the facial structure is reconstructed first.</p>
+
+<h3>Steps 4–5 in detail: mixing and injecting</h3>
+<div class="eq">λ<sub>1</sub> = cos θ,  λ<sub>2</sub> = sin θ cos φ,  λ<sub>3</sub> = sin θ sin φ</div>
+<div class="eq">Δε<sub>t</sub> = Σ<sub>k active</sub> λ<sub>k</sub> v̂<sub>k</sub>   ⟹   ε̂(t) = ε<sub>base</sub>(t) + Δε<sub>t</sub></div>
+<p class="plain">The two angles θ and φ set how much of each attribute to apply. These are the standard formulas for converting spherical coordinates into x, y, z. The weighted directions are summed and added to the ordinary noise prediction. The modified prediction then replaces the original in the DDIM update. An extra scale factor (0 to 1, or larger for single-attribute edits) can adjust how visible the edit is.</p>
+</section>
+
+<section id="angles">
+<h2><span class="num">04</span>Try it: angular control</h2>
+<p>With <b>two attributes</b>, the weights are (λ<sub>a</sub>, λ<sub>b</sub>) = (cos θ, sin θ), which is a point on a circle. Drag the dot or use the slider. At θ = 0° you get pure attribute a. At 90° you get pure b. At 45° you get an equal blend. At 180° you get the <em>opposite</em> of a. The paper reports that in its Figure 1 this works even though only the "old" embedding was provided.</p>
+<div class="panel">
+  <div class="toy">Toy illustration (a cartoon, not SphereEdit output)</div>
+  <div class="grid2">
+    <div>
+      <canvas id="circle" width="360" height="360"></canvas>
+      <label>θ = <span class="val" id="thVal">45°</span></label>
+      <input type="range" id="th" min="0" max="359" value="45">
+      <div class="btns" id="thPresets"></div>
+    </div>
+    <div>
+      <svg id="face" viewBox="0 0 200 220" style="width:100%;max-width:300px;display:block;margin:0 auto"></svg>
+      <div class="lamrow"><span class="lbl" style="color:var(--a)">λ<sub>a</sub> "Old"</span><div class="track"><div class="mid"></div><div class="fill" id="fa"></div></div><span class="v" id="va"></span></div>
+      <div class="lamrow"><span class="lbl" style="color:var(--b)">λ<sub>b</sub> "Smiling"</span><div class="track"><div class="mid"></div><div class="fill" id="fb"></div></div><span class="v" id="vb"></span></div>
+      <p class="plain" id="angleNote"></p>
+    </div>
+  </div>
+</div>
+
+<h3>Three attributes: the full sphere</h3>
+<p>With three attributes, a second angle φ is added and the point (λ<sub>1</sub>, λ<sub>2</sub>, λ<sub>3</sub>) moves over a sphere. Because λ<sub>1</sub>² + λ<sub>2</sub>² + λ<sub>3</sub>² = 1 always holds, the total edit strength stays bounded. This addresses the paper's "stable, no over-saturation" criterion.</p>
+<div class="panel">
+  <div class="grid2">
+    <div>
+      <label>θ = <span class="val" id="t3v"></span></label><input type="range" id="t3" min="0" max="180" value="55">
+      <label>φ = <span class="val" id="p3v"></span></label><input type="range" id="p3" min="0" max="360" value="45">
+      <div class="lamrow"><span class="lbl" style="color:var(--a)">λ<sub>1</sub> glasses</span><div class="track"><div class="mid"></div><div class="fill" id="f1"></div></div><span class="v" id="v1"></span></div>
+      <div class="lamrow"><span class="lbl" style="color:var(--b)">λ<sub>2</sub> lipstick</span><div class="track"><div class="mid"></div><div class="fill" id="f2"></div></div><span class="v" id="v2"></span></div>
+      <div class="lamrow"><span class="lbl" style="color:var(--c)">λ<sub>3</sub> young</span><div class="track"><div class="mid"></div><div class="fill" id="f3"></div></div><span class="v" id="v3"></span></div>
+      <p class="plain">Sum of squares: <span class="val" id="ss"></span> (always 1). A negative λ pushes the image <em>away</em> from that attribute.</p>
+    </div>
+    <div id="sphere3d" style="height:320px"></div>
+  </div>
+</div>
+</section>
+
+<section id="mask">
+<h2><span class="num">05</span>Try it: keeping edits in their place</h2>
+<p>If the edit direction were applied to the whole image, lipstick might tint the skin. To prevent this, SphereEdit uses each attribute's own <b>cross-attention map</b> M<sub>k</sub>, which shows where in the image the model "looks" when it reads that specific word. The map is thresholded at a <b>quantile q</b> to produce a region R<sub>k</sub>, and the edit is confined there.</p>
+<div class="panel">
+  <div class="toy">Toy illustration (synthetic attention maps)</div>
+  <div class="grid2">
+    <div>
+      <canvas id="maskCanvas" width="320" height="320"></canvas>
+    </div>
+    <div>
+      <label>Quantile threshold q = <span class="val" id="qv">0.80</span></label>
+      <input type="range" id="q" min="0" max="99" value="80">
+      <div class="btns">
+        <button id="showG" class="on">Glasses map</button><button id="showL" class="on">Lipstick map</button><button id="showB" class="on">Beard map</button>
+      </div>
+      <p class="plain">In this toy, a pixel is kept if its attention is above the q-th quantile of that map. <span style="color:var(--a)">■ glasses</span> <span style="color:#ff4f9a">■ lipstick</span> <span style="color:var(--b)">■ beard</span> <span style="color:#fff">■ overlap</span>.</p>
+      <p class="plain" id="maskNote"></p>
+    </div>
+  </div>
+</div>
+<div class="callout">What the paper found (Figure 5): with <b>broad masks</b>, edits leak (lipstick spills onto skin, global tone shifts). <b>Moderate thresholds (q ≈ 0.5)</b> keep glasses on the frames and lipstick on the lips. Thresholds that are <b>too aggressive (q &gt; 0.8)</b> fragment the target region and hurt identity preservation. The attention for "glasses" is sharp around the eyes, while "lipstick" is weaker and more diffuse, which makes it more sensitive to the threshold. The authors use <b>q = 0.8</b> as the best compromise between edit strength and spatial precision.<br><span class="plain">Note: the paper's Figure 5 caption describes the endpoints as "q = 0 means empty mask, q = 1 means no mask". The toy above follows the main text's description, in which a higher threshold gives a tighter mask.</span></div>
+</section>
+
+<section id="ortho">
+<h2><span class="num">06</span>Try it: disentangling overlapping attributes</h2>
+<p>Sometimes two attributes claim the same pixels, for example "mustache" and "lipstick" around the mouth. Simply adding their directions there can tangle them together. Making all directions perpendicular everywhere (global orthogonalization) would distort their meaning. SphereEdit instead removes the shared component <b>only inside the overlap</b>:</p>
+<div class="eq">S<sub>jk</sub> = 1[(x,y) ∈ R<sub>j</sub> ∩ R<sub>k</sub>]     v<sub>k</sub> ← v<sub>k</sub> − ⟨v<sub>k</sub>, v<sub>j</sub>⟩<sub>S<sub>jk</sub></sub> (v<sub>j</sub> ⊙ S<sub>jk</sub>)</div>
+<p class="plain">In plain words: find the pixels where both attributes are active. Within those pixels only, measure how much of v<sub>k</sub> points along v<sub>j</sub> (a masked inner product) and subtract that part. This is one Gram–Schmidt step restricted to the overlap. Outside the overlap, both directions stay unchanged.</p>
+<div class="panel">
+  <div class="toy">Toy illustration (2-D arrows standing in for high-dimensional directions)</div>
+  <div class="grid2">
+    <div><canvas id="orthoCanvas" width="360" height="300"></canvas></div>
+    <div>
+      <label>Angle between v<sub>j</sub> and v<sub>k</sub>: <span class="val" id="angv">50°</span></label>
+      <input type="range" id="ang" min="5" max="175" value="50">
+      <div class="btns"><button id="pixIn" class="on">Pixel inside overlap</button><button id="pixOut">Pixel outside overlap</button></div>
+      <p class="plain" id="orthoNote"></p>
+    </div>
+  </div>
+</div>
+</section>
+
+<section>
+<h2><span class="num">07</span>The algorithm in one box</h2>
+<div class="panel" style="font-family:monospace;font-size:.88rem;line-height:1.8">
+<b>For one denoising step t:</b><br>
+1 ε<sub>base</sub> ← UNet(z<sub>t</sub>, t, ∅)<br>
+2 <b>for</b> each active attribute k:<br>
+3   v<sub>k</sub> ← UNet(z<sub>t</sub>, t, c<sub>k</sub>) − ε<sub>base</sub><br>
+4   v̂<sub>k</sub> ← v<sub>k</sub> / ‖v<sub>k</sub>‖<br>
+5   M<sub>k</sub> ← CrossAttention(z<sub>t</sub>, c<sub>k</sub>)<br>
+6 <b>for</b> each pair (j,k): S<sub>jk</sub> ← Overlap(M<sub>j</sub>, M<sub>k</sub>); v<sub>k</sub> ← v<sub>k</sub> − ⟨v<sub>k</sub>,v<sub>j</sub>⟩<sub>S</sub>(v<sub>j</sub>⊙S<sub>jk</sub>)<br>
+7 λ<sub>k</sub> ← SphericalCoefficients(θ, φ)<br>
+8 ε̂ ← ε<sub>base</sub> + Σ λ<sub>k</sub> v̂<sub>k</sub><br>
+9 z<sub>t−1</sub> ← DDIM update using ε̂
+</div>
+<p><b>Setup used in the paper:</b>
+<span class="chip">Stable Diffusion v1.5</span><span class="chip">50 denoising steps</span><span class="chip">q = 0.8</span><span class="chip">θ = φ = π/2 (default)</span><span class="chip">seed 0</span><span class="chip">≈12 s for a 3-attribute edit on an NVIDIA L40</span></p>
+</section>
+
+<section id="results">
+<h2><span class="num">08</span>Results</h2>
+<h3>What the images show (qualitative)</h3>
+<ul>
+  <li><b>Angular traversal</b> (Figure 1, age × race): rotating θ produces a continuous interpolation, and intermediate angles give blends without identity drift.</li>
+  <li><b>Beyond faces</b>: Truck + Cartoon, Cat + Fox, Dog + Leopard, Sketch + Cubism. The truck keeps its structure when cartoonized, the dog keeps its shape when gaining fox-like fur, and the cat smoothly acquires leopard textures.</li>
+  <li><b>Versus baselines</b> (Figure 3: Glasses, Glasses+Young, Glasses+Young+Lipstick): according to the authors, Composable Diffusion and TurboEdit often alter facial identity and introduce global tone shifts, SEGA and Cycle-Diffusion tend to under-edit subtle attributes, TurboEdit introduces artifacts, and Composable Diffusion entangles attributes. SphereEdit keeps edits in the intended regions.</li>
+</ul>
+
+<h3>Numbers (quantitative)</h3>
+<p>The evaluation uses 100 FFHQ face images and two compositional edits. The metrics are:</p>
+<ul>
+  <li><b>CLIP-T ↑</b>: does the image match the requested text?</li>
+  <li><b>CLIP-I ↑</b>: is the subject still the same person?</li>
+  <li><b>DINO ↑</b>: are the structure and layout preserved?</li>
+  <li><b>LPIPS ↓</b>: low-level visual difference (lower means fewer artifacts).</li>
+</ul>
+<div class="panel">
+  <div class="btns" id="metricBtns"></div>
+  <div id="chart" style="height:360px"></div>
+</div>
+<div class="panel" style="overflow-x:auto">
+<table id="tbl"></table>
+<p class="plain" style="margin-top:10px">Green = best in column. On <b>Glasses + Mustache</b>, SphereEdit leads CLIP-T, CLIP-I and DINO, and is just behind SEGA on LPIPS. On <b>Eyebrow + Lipstick</b>, it leads CLIP-I, DINO and LPIPS, while TurboEdit edges it on CLIP-T by 0.0012.</p>
+</div>
+</section>
+
+<section id="ablation">
+<h2><span class="num">09</span>Ablations: which parts matter?</h2>
+<div class="grid2">
+  <div class="panel">
+    <b>Antipodal control (Figure 4)</b>
+    <p class="plain">The paper scales the directions for "Age", "Female", and "Cyprus" (a race/ethnicity condition) by −7.5 and +7.5. The negative scale removes or inverts the attribute: decreasing Age removes wrinkles and softens features. The positive scale amplifies it: increasing Age adds age-related texture. The authors report that identity is preserved and edits stay localized, so moving in opposite directions along one arrow gives interpretable, reversible changes.</p>
+    <label>Scale along the "Age" arrow: <span class="val" id="sv">0</span></label>
+    <input type="range" id="scale" min="-75" max="75" value="0">
+    <p class="plain" id="scaleNote">0 → original image.</p>
+  </div>
+  <div class="panel">
+    <b>Condition-aware masking (Figure 5)</b>
+    <p class="plain">Without masking, lipstick spreads beyond the lips and changes skin tone. With masking it stays on the attended regions. The threshold q controls the trade-off between leakage (masks too broad) and fragmentation (masks too tight). The authors conclude that masking is <b>critical</b> for disentangled multi-attribute edits. Use the interactive mask demo in section 05 to explore this trade-off.</p>
+  </div>
+</div>
+</section>
+
+<section id="limits">
+<h2><span class="num">10</span>Limitations (as stated by the authors)</h2>
+<ul class="lim">
+  <li><b>Only up to three attributes were tested.</b> The spherical formulas extend to more dimensions, but it is not yet clear how interpretable and stable many-way trade-offs would be in practice.</li>
+  <li><b>"Opposite" isn't always meaningful.</b> Antipodal symmetry emerges consistently in the embedding space, but its meaning can be ambiguous. In medical imaging, is the opposite of a disease health, or a different condition? For demographic attributes such as race, opposites are not well defined. This raises important questions about how spherical geometry interacts with sensitive attributes.</li>
+</ul>
+<div class="callout warn">The quantitative evaluation covers two compositional face edits on 100 FFHQ images. The results for animals, vehicles, and art are shown qualitatively.</div>
+</section>
+
+<section>
+<h2><span class="num">11</span>Takeaway</h2>
+<p>SphereEdit represents each attribute as a <b>unit-length direction in the denoiser's prediction space</b>. It uses antipodal symmetry for adding or removing an attribute, cross-attention masks to keep edits in place, overlap-only orthogonalization to keep attributes from tangling, and spherical angles to mix several attributes with bounded strength. The result is a training-free, plug-and-play editor whose controls are simple angles. Code: <a href="https://github.com/sala-kon/SphereEdit">github.com/sala-kon/SphereEdit</a>.</p>
+</section>
+</main>
+
+<footer>Explainer of "SphereEdit: Spherical Semantic Editing in Diffusion Models" (Konate et al., WACV). Toy visuals are illustrative only; all numbers are taken from the paper's Table 1.</footer>
+
+<script>
+// ---------- Method stepper ----------
+const stepsTxt=[
+ ["Two UNet passes → an edit direction","For each attribute (say \"glasses\"), the UNet predicts noise twice on the same noisy latent: once with the attribute's text embedding c<sub>k</sub> and once with the null token c<sub>∅</sub>. The difference v<sub>k</sub> isolates the attribute's contribution, roughly \"what the model thinks glasses looks like\" at this timestep. It is normalized to unit length so that attributes are on an equal footing."],
+ ["Condition-aware cross-attention maps","Cross-attention links text tokens to image locations. SphereEdit builds a map M<sub>k</sub> from the attention of <em>only that attribute's tokens</em>, not a prompt-wide average. \"Glasses\" attends to the eye region and \"beard\" to the lower face. Thresholding at quantile q gives a region R<sub>k</sub>."],
+ ["Overlap-aware orthogonalization","Where two attributes' regions overlap (e.g., mouth and beard), the shared component of their directions is removed with a masked Gram–Schmidt step. This happens only inside the overlap, so each attribute keeps its meaning everywhere else."],
+ ["Spherical (angular) mixing","Each unit direction is scaled by a spherical coefficient λ<sub>k</sub> computed from the angles θ and φ. One attribute is a line, two attributes form a circle, and three form a sphere."],
+ ["Add the edit and let the scheduler step","The mixed edit Δε is added to the base noise prediction. The DDIM scheduler then produces z<sub>t−1</sub> as usual. Repeating this at every step gradually steers the image toward the edit while staying faithful to the original. No retraining is needed."]
+];
+const sd=document.getElementById('stepDetail');
+function showStep(i){document.querySelectorAll('.step').forEach((e,j)=>e.classList.toggle('on',i==j));sd.innerHTML=`<h3 style="margin-top:0">${i+1}. ${stepsTxt[i][0]}</h3><p>${stepsTxt[i][1]}</p>`;}
+document.querySelectorAll('.step').forEach(e=>e.onclick=()=>showStep(+e.dataset.s));showStep(0);
+
+// ---------- helpers ----------
+function setBar(id,v,color){const f=document.getElementById(id);const w=Math.abs(v)*50;f.style.width=w+'%';f.style.left=v>=0?'50%':(50-w)+'%';f.style.background=color;}
+
+// ---------- Angular circle ----------
+const cv=document.getElementById('circle'),cx=cv.getContext('2d'),th=document.getElementById('th');
+const presets=[0,45,90,135,180,225,270,315];
+const pb=document.getElementById('thPresets');
+presets.forEach(p=>{const b=document.createElement('button');b.textContent=p+'°';b.onclick=()=>{th.value=p;drawAngle();};pb.appendChild(b);});
+function drawAngle(){
+  const t=+th.value*Math.PI/180, W=360,C=180,R=130;
+  cx.clearRect(0,0,W,W);
+  cx.strokeStyle='#2c3260';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(20,C);cx.lineTo(W-20,C);cx.moveTo(C,20);cx.lineTo(C,W-20);cx.stroke();
+  cx.strokeStyle='#555a8c';cx.beginPath();cx.arc(C,C,R,0,2*Math.PI);cx.stroke();
+  cx.fillStyle='#ff7a59';cx.font='13px sans-serif';cx.fillText('"Old" v̂a →',W-95,C-8);cx.fillText('"Young" (−v̂a)',22,C-8);
+  cx.fillStyle='#4fc3f7';cx.fillText('"Smiling" v̂b ↑',C+6,30);cx.fillText('"Frowning" (−v̂b)',C+6,W-24);
+  const x=C+R*Math.cos(t),y=C-R*Math.sin(t);
+  cx.strokeStyle='#ff7a59';cx.lineWidth=3;cx.beginPath();cx.moveTo(C,C);cx.lineTo(x,C);cx.stroke();
+  cx.strokeStyle='#4fc3f7';cx.beginPath();cx.moveTo(x,C);cx.lineTo(x,y);cx.stroke();
+  cx.strokeStyle='#b388ff';cx.lineWidth=2;cx.beginPath();cx.moveTo(C,C);cx.lineTo(x,y);cx.stroke();
+  cx.beginPath();cx.arc(C,C,28,0,-t,true);cx.stroke();
+  cx.fillStyle='#b388ff';cx.beginPath();cx.arc(x,y,9,0,2*Math.PI);cx.fill();
+  const la=Math.cos(t),lb=Math.sin(t);
+  document.getElementById('thVal').textContent=th.value+'°';
+  document.getElementById('va').textContent=la.toFixed(2);document.getElementById('vb').textContent=lb.toFixed(2);
+  setBar('fa',la,'#ff7a59');setBar('fb',lb,'#4fc3f7');
+  drawFace(la,lb);
+  let n='';const d=+th.value;
+  if(d==0)n='Pure attribute a (older).';else if(d==90)n='Pure attribute b (smiling).';else if(d==180)n='Antipode of a: the "opposite" (younger), using only the "old" direction negated.';else if(d==270)n='Antipode of b.';else n='A blend: both weights are non-zero, and the total strength stays fixed (λa² + λb² = 1).';
+  document.getElementById('angleNote').textContent=n;
+}
+function drawFace(age,smile){
+  const g=age>0?Math.round(60+age*150):60;const hair=age>0?`rgb(${g},${g},${g})`:'#3b2a1e';
+  const skinL=age<0?Math.min(1,-age):0;
+  const skin=`rgb(${Math.round(240-(age>0?age*20:0))},${Math.round(200+skinL*15)},${Math.round(170+skinL*15)})`;
+  const cheek=age<0?(-age*0.6):0;
+  let wr='';if(age>0){const o=age;wr=`<g stroke="#8a5a44" stroke-width="1.5" opacity="${o}" fill="none"><path d="M70 75 q30 -6 60 0"/><path d="M74 85 q26 -5 52 0"/><path d="M58 108 l-8 -3 M58 114 l-9 0"/><path d="M142 108 l8 -3 M142 114 l9 0"/><path d="M78 140 q-6 8 -4 18 M122 140 q6 8 4 18"/></g>`;}
+  const mc=smile*18;
+  document.getElementById('face').innerHTML=`
+  <ellipse cx="100" cy="72" rx="68" ry="50" fill="${hair}"/>
+  <ellipse cx="100" cy="115" rx="58" ry="70" fill="${skin}"/>
+  <circle cx="68" cy="140" r="11" fill="#ff8a8a" opacity="${cheek}"/><circle cx="132" cy="140" r="11" fill="#ff8a8a" opacity="${cheek}"/>
+  ${wr}
+  <circle cx="78" cy="110" r="${age<0?7.5:6}" fill="#222"/><circle cx="122" cy="110" r="${age<0?7.5:6}" fill="#222"/>
+  <path d="M100 118 l-6 18 h10" stroke="#a0705a" fill="none" stroke-width="2"/>
+  <path d="M75 ${158-mc/3} Q100 ${158+mc} 125 ${158-mc/3}" stroke="#a3333d" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <text x="100" y="212" fill="#a3a9c9" font-size="10" text-anchor="middle">cartoon stand-in only</text>`;
+}
+th.oninput=drawAngle;
+let drag=false;
+function ptr(e){const r=cv.getBoundingClientRect();const p=e.touches?e.touches[0]:e;const x=(p.clientX-r.left)*360/r.width-180,y=180-(p.clientY-r.top)*360/r.height;let a=Math.round(Math.atan2(y,x)*180/Math.PI);if(a<0)a+=360;th.value=a%360;drawAngle();}
+cv.onmousedown=e=>{drag=true;ptr(e)};window.onmouseup=()=>drag=false;cv.onmousemove=e=>{if(drag)ptr(e)};
+cv.addEventListener('touchstart',e=>{ptr(e);e.preventDefault()},{passive:false});cv.addEventListener('touchmove',e=>{ptr(e);e.preventDefault()},{passive:false});
+drawAngle();
+
+// ---------- 3D sphere ----------
+const t3=document.getElementById('t3'),p3=document.getElementById('p3');
+let sphereInit=false;
+function draw3(){
+  const t=+t3.value*Math.PI/180,p=+p3.value*Math.PI/180;
+  const l1=Math.cos(t),l2=Math.sin(t)*Math.cos(p),l3=Math.sin(t)*Math.sin(p);
+  document.getElementById('t3v').textContent=t3.value+'°';document.getElementById('p3v').textContent=p3.value+'°';
+  [['1',l1,'#ff7a59'],['2',l2,'#4fc3f7'],['3',l3,'#b388ff']].forEach(([k,v,c])=>{document.getElementById('v'+k).textContent=v.toFixed(2);setBar('f'+k,v,c);});
+  document.getElementById('ss').textContent=(l1*l1+l2*l2+l3*l3).toFixed(3);
+  if(typeof Plotly==='undefined')return;
+  // axes: x=λ2, y=λ3, z=λ1
+  const pt={type:'scatter3d',mode:'markers+text',x:[l2],y:[l3],z:[l1],marker:{size:7,color:'#b388ff'},text:['you'],textfont:{color:'#fff'},hoverinfo:'skip'};
+  const ln={type:'scatter3d',mode:'lines',x:[0,l2],y:[0,l3],z:[0,l1],line:{color:'#b388ff',width:6},hoverinfo:'skip'};
+  if(!sphereInit){
+    const xs=[],ys=[],zs=[];const N=24;
+    for(let i=0;i<=N;i++){const rx=[],ry=[],rz=[];const a=i*Math.PI/N;for(let j=0;j<=N*2;j++){const b=j*Math.PI/N;rx.push(Math.sin(a)*Math.cos(b));ry.push(Math.sin(a)*Math.sin(b));rz.push(Math.cos(a));}xs.push(rx);ys.push(ry);zs.push(rz);}
+    const sph={type:'surface',x:xs,y:ys,z:zs,opacity:.15,showscale:false,colorscale:[[0,'#4f5bd5'],[1,'#4f5bd5']],hoverinfo:'skip'};
+    const ax=(x,y,z,c,n)=>({type:'scatter3d',mode:'lines+text',x:[0,x],y:[0,y],z:[0,z],line:{color:c,width:4},text:['',n],textfont:{color:c},hoverinfo:'skip'});
+    Plotly.newPlot('sphere3d',[sph,ax(0,0,1.3,'#ff7a59','glasses'),ax(1.3,0,0,'#4fc3f7','lipstick'),ax(0,1.3,0,'#b388ff','young'),ln,pt],{
+      paper_bgcolor:'rgba(0,0,0,0)',margin:{l:0,r:0,t:0,b:0},showlegend:false,
+      scene:{xaxis:{visible:false},yaxis:{visible:false},zaxis:{visible:false},camera:{eye:{x:1.5,y:1.3,z:.8}}}},{displayModeBar:false,responsive:true});
+    sphereInit=true;
+  } else Plotly.restyle('sphere3d',{x:[ln.x,pt.x],y:[ln.y,pt.y],z:[ln.z,pt.z]},[4,5]);
+}
+t3.oninput=draw3;p3.oninput=draw3;draw3();
+
+// ---------- Mask demo ----------
+const mc=document.getElementById('maskCanvas'),mx=mc.getContext('2d'),G=40;
+function gauss(x,y,cx,cy,sx,sy){return Math.exp(-(((x-cx)/sx)**2+((y-cy)/sy)**2)/2);}
+function mkMap(f){const m=[];for(let y=0;y<G;y++)for(let x=0;x<G;x++)m.push(f(x,y));return m;}
+// deterministic pseudo-noise
+let seed=7;function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647;}
+const noiseA=mkMap(()=>rnd()),noiseB=mkMap(()=>rnd()),noiseC=mkMap(()=>rnd());
+const glasses=mkMap((x,y)=>Math.max(gauss(x,y,14,17,3.5,2.2),gauss(x,y,26,17,3.5,2.2))*0.9+0.08*noiseA[y*G+x]+0.15*gauss(x,y,20,20,12,12));
+const lips=mkMap((x,y)=>gauss(x,y,20,29,4.5,2.2)*0.55+0.2*gauss(x,y,20,26,9,7)+0.12*noiseB[y*G+x]);
+const beard=mkMap((x,y)=>gauss(x,y,20,32,9,4.5)*0.8+0.1*noiseC[y*G+x]+0.1*gauss(x,y,20,25,12,8));
+function quant(m,q){const s=[...m].sort((a,b)=>a-b);return s[Math.min(s.length-1,Math.floor(q*s.length))];}
+const show={G:true,L:true,B:true};
+['G','L','B'].forEach(k=>{const b=document.getElementById('show'+k);b.onclick=()=>{show[k]=!show[k];b.classList.toggle('on',show[k]);drawMask();};});
+const qS=document.getElementById('q');
+function drawMask(){
+  const q=+qS.value/100;document.getElementById('qv').textContent=q.toFixed(2);
+  const tg=quant(glasses,q),tl=quant(lips,q),tb=quant(beard,q);const cs=320/G;
+  mx.fillStyle='#0b0e1a';mx.fillRect(0,0,320,320);
+  mx.fillStyle='#3a3550';mx.beginPath();mx.ellipse(160,180,120,145,0,0,2*Math.PI);mx.fill();
+  let overlap=0,leakL=0;
+  for(let y=0;y<G;y++)for(let x=0;x<G;x++){
+    const i=y*G+x;const g=show.G&&glasses[i]>=tg,l=show.L&&lips[i]>=tl,b=show.B&&beard[i]>=tb;
+    const cnt=g+l+b;if(!cnt)continue;
+    if(l&&!(gauss(x,y,20,29,6,3.2)>0.3))leakL++;
+    let col;if(cnt>1){col='rgba(255,255,255,.9)';overlap++;}else if(g)col='rgba(255,122,89,.75)';else if(l)col='rgba(255,79,154,.75)';else col='rgba(79,195,247,.6)';
+    mx.fillStyle=col;mx.fillRect(x*cs,y*cs,cs,cs);
+  }
+  mx.strokeStyle='#888';mx.lineWidth=1.5;
+  [[112,136],[208,136]].forEach(([a,b])=>{mx.beginPath();mx.arc(a,b,10,0,2*Math.PI);mx.stroke();});
+  mx.beginPath();mx.moveTo(130,232);mx.quadraticCurveTo(160,245,190,232);mx.stroke();
+  let n;
+  if(q<0.4)n=`Broad masks: lipstick region extends well beyond the lips (${leakL} stray cells). This corresponds to the "leakage into skin / global tone shift" failure.`;
+  else if(q<=0.85)n=`Moderate masks: regions sit mostly on eyes and mouth. ${overlap} overlap cells (white), where overlap-aware orthogonalization kicks in.`;
+  else n=`Very tight masks: regions shrink and fragment, the "pruned too aggressively" failure mode.`;
+  document.getElementById('maskNote').textContent=n;
+}
+qS.oninput=drawMask;drawMask();
+
+// ---------- Orthogonalization ----------
+const oc=document.getElementById('orthoCanvas'),ox=oc.getContext('2d'),angS=document.getElementById('ang');let inside=true;
+document.getElementById('pixIn').onclick=()=>{inside=true;upd();};document.getElementById('pixOut').onclick=()=>{inside=false;upd();};
+function upd(){document.getElementById('pixIn').classList.toggle('on',inside);document.getElementById('pixOut').classList.toggle('on',!inside);drawOrtho();}
+function arrow(x0,y0,x1,y1,c,w,dash){ox.strokeStyle=c;ox.fillStyle=c;ox.lineWidth=w;ox.setLineDash(dash||[]);ox.beginPath();ox.moveTo(x0,y0);ox.lineTo(x1,y1);ox.stroke();ox.setLineDash([]);const a=Math.atan2(y1-y0,x1-x0);ox.beginPath();ox.moveTo(x1,y1);ox.lineTo(x1-11*Math.cos(a-.4),y1-11*Math.sin(a-.4));ox.lineTo(x1-11*Math.cos(a+.4),y1-11*Math.sin(a+.4));ox.fill();}
+function drawOrtho(){
+  const a=+angS.value*Math.PI/180;document.getElementById('angv').textContent=angS.value+'°';
+  ox.clearRect(0,0,360,300);const O=[180,220],R=140;
+  const vj=[1,0],vk=[Math.cos(a),Math.sin(a)];const dot=vk[0];
+  const P=(v)=>[O[0]+v[0]*R,O[1]-v[1]*R];
+  arrow(O[0],O[1],...P(vj),'#4fc3f7',3);ox.fillText('',0,0);
+  ox.font='14px sans-serif';ox.fillStyle='#4fc3f7';ox.fillText('v_j (mustache)',P(vj)[0]-90,P(vj)[1]+20);
+  arrow(O[0],O[1],...P(vk),inside?'rgba(255,122,89,.45)':'#ff7a59',3,inside?[6,5]:null);
+  ox.fillStyle='#ff7a59';ox.fillText(inside?'original v_k':'v_k (lipstick), unchanged',P(vk)[0]+(vk[0]<0?-150:6),P(vk)[1]-6);
+  if(inside){
+    const nk=[0,vk[1]];
+    arrow(...P([dot,0]),...P(vk),'#bbb',1,[3,3]);
+    arrow(O[0],O[1],...P([dot,0]),'#ffd54f',2,[4,3]);
+    ox.fillStyle='#ffd54f';ox.fillText('removed: ⟨v_k,v_j⟩ v_j',Math.min(P([dot,0])[0],O[0])-10,O[1]+38);
+    arrow(O[0],O[1],...P(nk),'#ff7a59',4);
+    ox.fillStyle='#ff7a59';ox.fillText('new v_k ⊥ v_j',P(nk)[0]+8,P(nk)[1]+16);
+  }
+  document.getElementById('orthoNote').innerHTML=inside?
+   `Inside the overlap, the part of v<sub>k</sub> that points along v<sub>j</sub> (overlap ≈ ${dot.toFixed(2)}) is subtracted. The new v<sub>k</sub> is perpendicular, so the two edits no longer push the same pixels in the same way.`:
+   `Outside the overlap the mask S<sub>jk</sub> is 0, so nothing is subtracted. v<sub>k</sub> keeps its full original meaning, which is why the paper avoids <em>global</em> orthogonalization.`;
+}
+angS.oninput=drawOrtho;drawOrtho();
+
+// ---------- Antipodal scale ----------
+const sc=document.getElementById('scale');
+sc.oninput=()=>{const s=sc.value/10;document.getElementById('sv').textContent=s.toFixed(1);
+ document.getElementById('scaleNote').textContent=s<-0.05?`Negative scale moves along −v̂_age. The paper reports this removes wrinkles and softens features (shown at −7.5).`:s>0.05?`Positive scale moves along +v̂_age. The paper reports this adds age-related texture (shown at +7.5).`:'0 → original image.';};
+
+// ---------- Results ----------
+const methods=['SEGA','Composable','CycleDiff','TurboEdit','SphereEdit (Ours)'];
+const data={
+ 'Glasses + Mustache':{'CLIP-T':[0.2226,0.2337,0.2260,0.2203,0.2369],'CLIP-I':[0.7395,0.6353,0.6909,0.6771,0.7573],'DINO':[0.6271,0.3226,0.4774,0.6250,0.7026],'LPIPS':[0.1796,0.3107,0.2142,0.2248,0.1919]},
+ 'Eyebrow + Lipstick':{'CLIP-T':[0.2230,0.2290,0.2238,0.2333,0.2321],'CLIP-I':[0.6960,0.6227,0.6562,0.5871,0.7275],'DINO':[0.6011,0.3860,0.5229,0.4702,0.6836],'LPIPS':[0.1870,0.3589,0.2332,0.2252,0.1436]}
+};
+const metrics=['CLIP-T','CLIP-I','DINO','LPIPS'];
+const mb=document.getElementById('metricBtns');let cur='DINO';
+metrics.forEach(m=>{const b=document.createElement('button');b.textContent=m+(m=='LPIPS'?' ↓':' ↑');b.onclick=()=>{cur=m;drawChart();};b.dataset.m=m;mb.appendChild(b);});
+function drawChart(){
+  mb.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m==cur));
+  if(typeof Plotly==='undefined')return;
+  const colors=['#7986cb','#4db6ac','#90a4ae','#ffb74d','#b388ff'];
+  const traces=methods.map((m,i)=>({type:'bar',name:m,x:Object.keys(data),y:Object.keys(data).map(t=>data[t][cur][i]),marker:{color:colors[i],line:{color:i==4?'#fff':'rgba(0,0,0,0)',width:i==4?2:0}},text:Object.keys(data).map(t=>data[t][cur][i].toFixed(4)),textposition:'outside',textfont:{size:9,color:'#ccc'}}));
+  const all=Object.keys(data).flatMap(t=>data[t][cur]);const mn=Math.min(...all),mxv=Math.max(...all);
+  Plotly.react('chart',traces,{barmode:'group',paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#e8eaf6'},
+    title:{text:cur+(cur=='LPIPS'?' (lower is better)':' (higher is better)'),font:{size:15}},
+    yaxis:{range:[Math.max(0,mn-(mxv-mn)*0.6),mxv+(mxv-mn)*0.35],gridcolor:'#2c3260'},legend:{orientation:'h',y:-0.15},margin:{t:40,l:50,r:10,b:40}},{displayModeBar:false,responsive:true});
+}
+drawChart();
+// table
+const tbl=document.getElementById('tbl');
+let h='<tr><th rowspan="2">Method</th><th colspan="4">Glasses + Mustache</th><th colspan="4">Eyebrow + Lipstick</th></tr><tr>'+[...metrics,...metrics].map(m=>`<th>${m}${m=='LPIPS'?' ↓':' ↑'}</th>`).join('')+'</tr>';
+methods.forEach((m,i)=>{h+=`<tr class="${i==4?'ours':''}"><td>${m}</td>`;Object.keys(data).forEach(t=>metrics.forEach(k=>{const col=data[t][k];const best=k=='LPIPS'?Math.min(...col):Math.max(...col);h+=`<td class="${col[i]==best?'best':''}">${col[i].toFixed(4)}</td>`;}));h+='</tr>';});
+tbl.innerHTML=h;
+</script>
+</body>
+</html>

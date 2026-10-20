@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Removing Reflections from RAW Photos — An Interactive Explainer</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1218; --panel:#171b24; --panel2:#1e2430; --ink:#e8ecf3; --muted:#9aa5b8;
+    --accent:#7cc4ff; --warm:#ffb45e; --good:#6fe0a3; --bad:#ff7a7a; --line:#2b3242;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif}
+  header{padding:64px 20px 40px;text-align:center;background:radial-gradient(ellipse at top,#1d2a40 0%,var(--bg) 70%)}
+  header h1{font-size:2.5em;margin:0 0 .2em;letter-spacing:-.5px}
+  header .authors{color:var(--muted)}
+  header .tag{display:inline-block;margin-top:14px;padding:4px 12px;border:1px solid var(--line);border-radius:20px;color:var(--accent);font-size:.85em}
+  nav{position:sticky;top:0;z-index:10;background:rgba(15,18,24,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);display:flex;gap:4px;flex-wrap:wrap;justify-content:center;padding:8px}
+  nav a{color:var(--muted);text-decoration:none;font-size:.85em;padding:4px 10px;border-radius:6px}
+  nav a:hover{color:var(--ink);background:var(--panel2)}
+  main{max-width:980px;margin:0 auto;padding:0 20px 80px}
+  section{padding:46px 0 10px;border-bottom:1px solid var(--line)}
+  h2{font-size:1.7em;margin:0 0 .4em}
+  h2 .num{color:var(--accent);font-weight:400;margin-right:8px}
+  h3{margin:1.4em 0 .4em;color:#cfe6ff}
+  p{margin:.6em 0}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:18px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+  .eq{font-family:"Cambria Math",Georgia,serif;font-size:1.25em;text-align:center;padding:12px;background:var(--panel2);border-radius:8px;margin:12px 0}
+  .callout{border-left:4px solid var(--accent);background:var(--panel2);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+  .callout.warm{border-color:var(--warm)}
+  .callout.good{border-color:var(--good)}
+  .callout.bad{border-color:var(--bad)}
+  label{font-size:.9em;color:var(--muted)}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .ctrl{margin:10px 0}
+  .ctrl .val{float:right;color:var(--ink);font-variant-numeric:tabular-nums}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font:inherit;font-size:.9em}
+  button.on{background:var(--accent);color:#08121f;border-color:var(--accent);font-weight:600}
+  button:hover{border-color:var(--accent)}
+  canvas{width:100%;border-radius:8px;display:block;background:#000;image-rendering:auto}
+  .caption{font-size:.82em;color:var(--muted);text-align:center;margin-top:4px}
+  .steps{display:flex;flex-direction:column;gap:6px}
+  .step{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--panel2);transition:.15s}
+  .step:hover{border-color:var(--accent)}
+  .step .n{min-width:28px;height:28px;border-radius:50%;background:#2a3346;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85em}
+  .step.linear .n{background:#244a35;color:var(--good)}
+  .step.nonlinear .n{background:#4a2424;color:var(--bad)}
+  .step.chosen{border-color:var(--good);box-shadow:0 0 0 1px var(--good)}
+  .step .detail{display:none;font-size:.9em;color:var(--muted);margin-top:4px}
+  .step.open .detail{display:block}
+  .diagram{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:14px 0}
+  .box{padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;text-align:center;min-width:110px;font-size:.92em;transition:.15s}
+  .box:hover,.box.sel{border-color:var(--accent);background:#20304a}
+  .arrow{color:var(--muted);font-size:1.3em}
+  #archInfo{min-height:120px}
+  table{border-collapse:collapse;width:100%;font-size:.9em}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600}
+  .plot{width:100%;height:380px}
+  .pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:.8em;background:#24304a;color:var(--accent);margin:2px}
+  .big{font-size:2.2em;font-weight:700;color:var(--accent);line-height:1.1}
+  .stat{text-align:center;padding:16px;background:var(--panel2);border-radius:10px}
+  .stat .lbl{font-size:.85em;color:var(--muted)}
+  ul li{margin:.3em 0}
+  .req{counter-reset:r;list-style:none;padding:0}
+  .req li{counter-increment:r;padding:6px 0 6px 38px;position:relative}
+  .req li::before{content:counter(r);position:absolute;left:0;top:6px;width:26px;height:26px;border-radius:50%;background:#24304a;color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.85em;font-weight:700}
+  footer{text-align:center;color:var(--muted);font-size:.85em;padding:30px}
+  svg text{font-family:inherit}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Removing Reflections from RAW Photos</h1>
+  <div class="authors">Eric Kee · Adam Pikielny · Kevin Blackburn-Matzen · Marc Levoy — Adobe Inc.</div>
+  <div class="tag">An interactive explainer · arXiv 2404.14414</div>
+</header>
+
+<nav>
+  <a href="#problem">Problem</a><a href="#idea">Key idea</a><a href="#light">Light adds</a>
+  <a href="#pipeline">Why RAW</a><a href="#fresnel">Glass physics</a><a href="#context">Context photo</a>
+  <a href="#data">Dataset</a><a href="#model">Models</a><a href="#results">Results</a><a href="#limits">Limitations</a>
+</nav>
+
+<main>
+
+<!-- PROBLEM -->
+<section id="problem">
+  <h2><span class="num">01</span>The problem: photos through glass</h2>
+  <p>Taking pictures through glass is hard. Light bounces off the glass and <b>adds itself</b> on top of the subject you actually wanted. Photos from cars and airplanes show the cabin, photos from buildings include ceiling lights, paintings are covered by haze, and window-shopping shots get photobombed by the photographer.</p>
+  <p>Removing those reflections is difficult because they happen everywhere — shops, cars, planes, museums, eyeglasses, screens — and they depend on the time of day, the lighting, the scene and its textures.</p>
+  <div class="callout">
+    <b>Why not just collect real training data?</b> One way to get a "true" answer is to take a second photo with black material behind the glass so only the reflection reaches the camera, then subtract. This works only if nothing moves and the lighting doesn't change — which severely restricts how much data you can collect. Placing glass panes in a scene is another option, but then the lighting on both sides is usually similar, which is unrealistic.
+  </div>
+  <h3>What a practical system must do</h3>
+  <p class="muted">The authors target consumer photography, with six requirements:</p>
+  <ol class="req">
+    <li>Handle the typical reflections in consumer photos.</li>
+    <li>Minimize user interactions (steps, taps, strokes).</li>
+    <li>Allow photo capture in a typical amount of time.</li>
+    <li>Show results on screen for review in about 5 seconds.</li>
+    <li>Produce results at the input image's full resolution.</li>
+    <li>Make editing easy, for error correction and aesthetics.</li>
+  </ol>
+</section>
+
+<!-- KEY IDEA -->
+<section id="idea">
+  <h2><span class="num">02</span>The key idea in one paragraph</h2>
+  <p>Instead of training on hard-to-collect real reflection photos, the authors <b>simulate</b> millions of reflections by physically combining pairs of ordinary <b>RAW</b> photos — images whose pixel values are still proportional to actual light. Because the mixing respects real physics (light adds, glass attenuates by angle, different light sources have different colors and strengths), a model trained <i>only</i> on these simulations works on real photos without any fine-tuning on real data.</p>
+  <div class="grid3">
+    <div class="stat"><div class="big">RAW</div><div class="lbl">end-to-end: input, training data, and output are linear images</div></div>
+    <div class="stat"><div class="big">+ context</div><div class="lbl">an optional second photo looking the other way (e.g. selfie camera)</div></div>
+    <div class="stat"><div class="big">~5 s</div><div class="lbl">1K preview in 4.5 s (MacBook) / 6.5 s (iPhone 14 Pro)</div></div>
+  </div>
+  <h3>The four contributions</h3>
+  <ul>
+    <li>A way to <b>synthesize training data</b> so that models don't need fine-tuning on real images.</li>
+    <li>Showing that <b>training and testing on RAW</b> improves performance significantly — <i>more than the architectural differences between prior methods</i>.</li>
+    <li>Using a <b>contextual photo</b> to help identify what is reflection.</li>
+    <li>An <b>upsampler</b> that greatly reduces artifacts, producing 1K previews in ~5 s and full-resolution output.</li>
+  </ul>
+</section>
+
+<!-- LIGHT ADDS: interactive -->
+<section id="light">
+  <h2><span class="num">03</span>Light simply adds — but only in the right units</h2>
+  <p>The most fundamental principle in the paper is that glass <b>superimposes</b> two scenes. Photons from the scene behind the glass (the <i>transmission</i>, <b>t</b>) and photons bounced from the scene in front of it (the <i>reflection</i>, <b>r</b>) land on the same sensor pixels and are counted together:</p>
+  <div class="eq">m = t + r</div>
+  <p>Here <b>m</b> is the "mixture" — the photo you actually take. This equation is only true for <b>linear, scene-referred</b> images (like RAW), where a pixel value is proportional to how much light arrived. Ordinary JPEGs have been tone-mapped, white-balanced, sharpened and compressed, so adding two JPEGs does <i>not</i> reproduce what real glass does.</p>
+
+  <div class="card">
+    <h3 style="margin-top:0">Try it: simulate a reflection</h3>
+    <p class="muted" style="margin-top:0">A toy outdoor street (transmission, daylight) seen through a window, with a dim indoor room lit by warm lamps (reflection) behind the photographer. These are procedurally drawn illustrations, not images from the paper.</p>
+    <div class="btns" id="mixMode">
+      <button class="on" data-m="lin">Physically accurate (linear RAW mixing)</button>
+      <button data-m="8bit">Heuristic 8-bit blending (prior practice)</button>
+    </div>
+    <div class="btns" id="wbMode">
+      <button class="on" data-w="joint">Mix before white balance (correct)</button>
+      <button data-w="sep">White-balance each image separately</button>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="ctrl"><label>Glass angle of incidence θ <span class="val" id="angVal"></span></label><input type="range" id="ang" min="0" max="85" value="35"></div>
+        <div class="ctrl"><label>Indoor light power (stops) <span class="val" id="powVal"></span></label><input type="range" id="pow" min="-3" max="4" step="0.5" value="0"></div>
+        <div class="ctrl"><label><input type="checkbox" id="dbl"> Add double reflection (two glass surfaces)</label></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+          <div><canvas id="cvT" width="300" height="200"></canvas><div class="caption">Transmission t (outdoor)</div></div>
+          <div><canvas id="cvR" width="300" height="200"></canvas><div class="caption">Reflection source (indoor)</div></div>
+        </div>
+      </div>
+      <div>
+        <canvas id="cvM" width="300" height="200"></canvas>
+        <div class="caption">Simulated captured photo m</div>
+        <div id="mixNote" class="callout" style="font-size:.9em"></div>
+      </div>
+    </div>
+  </div>
+  <p>What to notice (these effects are described in the paper's Fig. 3 and discussion):</p>
+  <ul>
+    <li><b>Strong in shadows, transparent in highlights.</b> In linear mixing, a dim reflection is easily visible over dark regions but nearly vanishes over the bright sky. Prior works that blend 8-bit tone-mapped images get this wrong: their reflections overpower highlights and are too weak in shadows, which tone mapping has boosted.</li>
+    <li><b>Indoor reflections are mostly lights.</b> Indoor light is weak, so reflections of interiors over outdoor scenes are typically regions near light sources or windows — and they often look <span style="color:var(--warm)">yellow</span> because of the indoor illuminant color.</li>
+    <li><b>Illuminant color must mix before white balancing.</b> The two sides of the glass are usually lit by different light sources. If you white-balance each image separately, the warm cast of the indoor reflection disappears — not what a camera actually records.</li>
+  </ul>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <h2><span class="num">04</span>Where in the camera pipeline should you mix?</h2>
+  <p>A RAW file becomes a finished photo through a series of steps, described by Adobe Camera RAW (ACR) and the DNG specification. Click each step. The authors needed a stage that is <span style="color:var(--good)">linear</span>, keeps the <b>illuminant color</b>, and is <b>sensor-independent</b>, so photos from different cameras can be summed.</p>
+  <div class="steps" id="acrSteps"></div>
+  <div class="callout good" style="margin-top:16px"><b>Answer: Step 4, XYZ color.</b> It is linear with respect to light, sensor-independent, and the illuminant color is still present. Reflections are simulated there; models then operate on linear RGB (Step 6), and outputs are written back as new RAW images by inverting steps 3–6.</div>
+  <p class="muted" style="font-size:.9em">A technical subtlety: ACR offers two white-balancing paths. The common one (white balance, then convert to XYZ with a "forward matrix") is the wrong order for simulation. The authors use the second path via "color matrices", which converts to XYZ <i>before</i> white balancing. Every DNG file is required to include these color matrices.</p>
+</section>
+
+<!-- FRESNEL -->
+<section id="fresnel">
+  <h2><span class="num">05</span>Glass physics: Fresnel, exposure, blur and ghosts</h2>
+  <p>Mixing correctly isn't just about adding. The simulation models how much light the glass reflects, how bright each scene is, camera geometry, defocus and double reflections.</p>
+
+  <h3>Fresnel attenuation — the most essential effect</h3>
+  <p>Glass reflects only a fraction <b>α</b> of incoming light, and that fraction depends on the angle θ<sub>i</sub> at which light hits the glass:</p>
+  <div class="eq">α = ½ (α<sub>⊥</sub> + α<sub>∥</sub>),&nbsp;&nbsp; α<sub>⊥</sub> = sin²(θ<sub>i</sub>−θ′<sub>i</sub>) / sin²(θ<sub>i</sub>+θ′<sub>i</sub>),&nbsp;&nbsp; α<sub>∥</sub> = tan²(θ<sub>i</sub>−θ′<sub>i</sub>) / tan²(θ<sub>i</sub>+θ′<sub>i</sub>)</div>
+  <p><b>In plain words:</b> light is made of two polarizations, each reflecting a different amount; α is their average. θ′<sub>i</sub> = arcsin(sin θ<sub>i</sub> / κ) is the angle the light bends to inside glass, where κ is the glass's refractive index. Looking straight at glass, only a few percent reflects; at grazing angles much more does. The transmitted scene is dimmed by (1 − α), which is usually close to 1.</p>
+  <div class="card">
+    <div class="grid2">
+      <div>
+        <div class="ctrl"><label>Angle of incidence θ<sub>i</sub> <span class="val" id="fAngVal"></span></label><input type="range" id="fAng" min="0" max="89" value="30"></div>
+        <div class="ctrl"><label>Refractive index κ <span class="val" id="fKVal"></span></label><input type="range" id="fK" min="1.47" max="1.53" step="0.005" value="1.5"></div>
+        <table>
+          <tr><td>Reflected fraction α</td><td id="fA"></td></tr>
+          <tr><td>Reflection, in photographic stops</td><td id="fS"></td></tr>
+          <tr><td>Transmitted fraction 1 − α</td><td id="fT"></td></tr>
+          <tr><td>Ghost (2nd reflection) β = (1−α)·α·(1−α)</td><td id="fB"></td></tr>
+        </table>
+        <p class="muted" style="font-size:.85em">The paper samples κ uniformly in [1.47, 1.53]. It reports that for θ<sub>i</sub> between 0° and 45°, Fresnel attenuation accounts for up to −4 stops, gradually strengthening to −1 stop for rays that strike the glass at 83°.</p>
+      </div>
+      <div id="fresPlot" class="plot" style="height:320px"></div>
+    </div>
+  </div>
+  <p>Because θ<sub>i</sub> changes across the image when you shoot obliquely, reflections are stronger toward the edges of a photo. This creates natural spatial "priors" — for example, skies typically reflect near the top of images.</p>
+
+  <h3>Exposure: un-expose, mix, re-expose</h3>
+  <p>Each source photo was taken with its own exposure <b>e = s · g / n²</b> (shutter speed s, ISO gain g, aperture n). To put both scenes on the same physical scale, each image is divided by its own exposure: <b>t′ = t / e<sub>t</sub></b>, <b>r′ = r / e<sub>r</sub></b>. Now pixels are proportional to true scene brightness, so a sunny street really is much brighter than a lamp-lit room. Then a virtual camera "captures" the mixture:</p>
+  <div class="eq">m = C(m′) = W · e′ · m′,&nbsp;&nbsp; e′ = τ / E[m′]</div>
+  <p><b>In plain words:</b> pick a new exposure e′ so that the average pixel lands at a target value τ (sRGB 0.4), then apply a new white balance W (a 3×3 color matrix) chosen by an automatic white-balancer (C5). If any pixels in t or r are saturated, e′ = 1 / min(max t′, max r′) so they stay saturated. The same white balance is applied to m, t, r and the context photo.</p>
+
+  <h3>Geometry, defocus and double reflections</h3>
+  <div class="grid3">
+    <div class="card" style="margin:0"><b>Camera pose</b><p class="muted" style="font-size:.9em">Camera azimuth to the glass up to 50°, field of view 50°–80°. Pairs are rejected if their tilt differs by more than 15°, or either is tilted beyond 45° or rolled beyond 10° — which aligns horizons of t and r.</p></div>
+    <div class="card" style="margin:0"><b>Defocus blur</b><p class="muted" style="font-size:.9em">Circle of confusion δ = |d<sub>o</sub>−d<sub>f</sub>| f² / (d<sub>o</sub> N (d<sub>f</sub>−f)), using iPhone-like optics (N≈1.6, f≈26mm equiv.) and distances 1–100 ft. Reflections typically turn out sharp — consistent with prior observations.</p></div>
+    <div class="card" style="margin:0"><b>Double reflection</b><p class="muted" style="font-size:.9em">A ghost from the glass's back surface: j<sub>d</sub> = α·j + β·j<sub>w</sub>, with β = (1−α)α(1−α). Glass thickness 8–20 mm, viewing distance 0.5–2 m, 50% chance of a double pane.</p></div>
+  </div>
+  <p class="muted">Deliberately <i>not</i> simulated: global color casts, dirt and scratches on the glass — existing editing tools can correct those.</p>
+</section>
+
+<!-- CONTEXT -->
+<section id="context">
+  <h2><span class="num">06</span>The optional "context" photo</h2>
+  <p>A single photo is ambiguous: is that colorful shape part of the shop window display, or a reflection of something behind you? The system optionally accepts a <b>contextual photo c</b> — any picture of the scene <i>behind</i> the photographer. It can come from the selfie camera at the same time, or by quickly turning around. It doesn't need to be simultaneous or aligned.</p>
+  <div class="card">
+    <svg viewBox="0 0 640 260" width="100%">
+      <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#9aa5b8"/></marker></defs>
+      <rect x="315" y="20" width="10" height="220" fill="#7cc4ff" opacity=".5"/>
+      <text x="320" y="14" fill="#7cc4ff" text-anchor="middle" font-size="13">glass</text>
+      <circle cx="220" cy="130" r="9" fill="#e8ecf3"/><text x="220" y="160" fill="#e8ecf3" text-anchor="middle" font-size="12">real camera</text>
+      <circle cx="420" cy="130" r="9" fill="none" stroke="#e8ecf3" stroke-dasharray="3 3"/><text x="420" y="160" fill="#9aa5b8" text-anchor="middle" font-size="12">virtual "reflection" camera</text>
+      <line x1="232" y1="130" x2="305" y2="130" stroke="#9aa5b8" marker-end="url(#ah)"/>
+      <text x="270" y="122" fill="#9aa5b8" font-size="12" text-anchor="middle">d</text>
+      <text x="370" y="122" fill="#9aa5b8" font-size="12" text-anchor="middle">d</text>
+      <line x1="210" y1="130" x2="80" y2="60" stroke="#ffb45e"/><line x1="210" y1="130" x2="80" y2="200" stroke="#ffb45e"/>
+      <text x="70" y="135" fill="#ffb45e" font-size="13" text-anchor="middle">context</text>
+      <text x="70" y="152" fill="#ffb45e" font-size="13" text-anchor="middle">view (180°)</text>
+      <text x="520" y="70" fill="#6fe0a3" font-size="12">transmission scene</text>
+      <text x="520" y="86" fill="#6fe0a3" font-size="12">beyond the glass</text>
+      <text x="320" y="255" fill="#9aa5b8" font-size="12" text-anchor="middle">The reflection is seen from a viewpoint shifted by twice the distance to the glass (2d)</text>
+    </svg>
+  </div>
+  <p>The authors note three reasons the context photo rarely matches the reflection exactly:</p>
+  <ol>
+    <li>Even if the cameras sit together, the reflection's viewpoint is shifted by <b>twice the distance to the glass</b>.</li>
+    <li>If you shoot the glass at an angle, turning 180° gives a view with little common content.</li>
+    <li>With the selfie camera, the photographer may block part of the reflected scene.</li>
+  </ol>
+  <div class="callout warm"><b>Clever training trick:</b> rather than burden users, the context photo is defined as <i>any</i> view of the reflected scene that does <i>not</i> show the same parts as the reflection. In simulation, each reflection source image is split into two non-overlapping halves (left/right or top/bottom): one half becomes the reflection r, the other becomes the context c. This prevents the model from "cheating" by matching identical patches, while still letting c carry lighting color and scene type (indoor, outdoor, city, nature…).</div>
+</section>
+
+<!-- DATA -->
+<section id="data">
+  <h2><span class="num">07</span>Building millions of realistic examples</h2>
+  <p>Not every physically correct mixture is useful. Some are overexposed, some reflections are invisible, and some are so strong nobody could tell what the subject is. So the authors <b>search</b> a huge space of simulated mixtures and keep only well-exposed, well-mixed ones.</p>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <h3 style="margin-top:0">Recipe (Function 1)</h3>
+      <ol style="font-size:.92em">
+        <li>Take a random pair of XYZ images (i, j).</li>
+        <li>Split j into non-overlapping reflection and context parts (r, c).</li>
+        <li>Pick a transmission part t from i.</li>
+        <li>Un-expose t and r using their exposure metadata.</li>
+        <li>Apply the geometric simulation (Fresnel, pose, blur, ghosts).</li>
+        <li>Composite m = t + r.</li>
+        <li>Compute a new exposure and white balance for m.</li>
+        <li>Apply the same white balance to t, r, c.</li>
+        <li>Convert everything to linear sRGB.</li>
+      </ol>
+    </div>
+    <div class="card" style="margin:0">
+      <h3 style="margin-top:0">Quality filters</h3>
+      <p style="font-size:.92em"><b>Well exposed:</b> mean pixel value within a normal distribution of the RAW dataset.</p>
+      <p style="font-size:.92em"><b>Well mixed:</b> similarity (SSIM) between m and t must be within <b>[0.4, 0.94]</b>. Too high → the reflection is imperceptible. Too low → not interpretable even by a human.</p>
+      <p style="font-size:.92em"><b>Not spread thin:</b> the spatial standard deviation of SSIM must be ≥ 0.05, removing faint reflections spread evenly across the frame.</p>
+      <p style="font-size:.92em"><b>Pairings:</b> outdoor×indoor, indoor×outdoor, indoor×indoor. Outdoor×outdoor is omitted as uncommon.</p>
+    </div>
+  </div>
+  <h3>Scale</h3>
+  <div class="grid3">
+    <div class="stat"><div class="big">12,803</div><div class="lbl">RAW photos (MIT5K, RAISE) + 2,233 indoor HDR panoramas (Laval Indoor, ≈12,367 views)</div></div>
+    <div class="stat"><div class="big">10⁸ → 10⁷</div><div class="lbl">candidate mixtures searched → about 10 million kept after culling</div></div>
+    <div class="stat"><div class="big">1.24 M</div><div class="lbl">training examples at 256² (plus 1.08 M at 2048² for the upsampler)</div></div>
+  </div>
+  <p>Images are grouped into 10,547 outdoor and 14,623 indoor, and split into train/validation/test (80/15/5%) <i>before</i> simulation. For comparison, the largest real reflection dataset to date has 14,952 pairs.</p>
+  <p>A striking qualitative check (Fig. 3): real reflection photos were shuffled together with simulated ones, and for each real photo a similar synthetic example could be found in the dataset — because it exceeds a million examples.</p>
+</section>
+
+<!-- MODEL -->
+<section id="model">
+  <h2><span class="num">08</span>The removal system: base model + upsampler</h2>
+  <p>Click each block to learn what it does.</p>
+  <div class="diagram">
+    <div class="box" data-k="raw">RAW reader<br><span class="muted" style="font-size:.8em">photo + context</span></div><span class="arrow">→</span>
+    <div class="box" data-k="base">Base model<br><span class="muted" style="font-size:.8em">256p</span></div><span class="arrow">→</span>
+    <div class="box" data-k="up">Upsampler<br><span class="muted" style="font-size:.8em">Gaussian pyramid</span></div><span class="arrow">→</span>
+    <div class="box" data-k="out">RAW writer<br><span class="muted" style="font-size:.8em">t and r</span></div>
+  </div>
+  <div class="card" id="archInfo"><span class="muted">Select a block above.</span></div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Why mask-based upsampling avoids artifacts</h3>
+    <div class="btns" id="upMode">
+      <button class="on" data-u="ours">This paper: upsample masks</button>
+      <button data-u="vd">V-DESIRR-style: upsample images</button>
+    </div>
+    <div id="upText"></div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results">
+  <h2><span class="num">09</span>Results</h2>
+  <p>Public reflection benchmarks only provide JPG/PNG images, not RAW. So numbers are reported on the simulated RAW test sets, and visual results use RAW photos captured in the field (some with captured ground truth). Quality is measured with <b>PSNR</b> (pixel accuracy, higher is better) and <b>SSIM</b> (structural similarity, shown as %, higher is better). "Control" means doing nothing — comparing the captured photo m directly to the true t or r.</p>
+  <div class="callout">
+    <b>Reading "%↑":</b> this column measures SSIM improvement relative to the control. In the table values, it equals the fraction of the gap between the untouched photo and a perfect score that the method closed — e.g. control SSIM<sub>t</sub> 85.8 → 95.7 closes about 70% of the remaining 14.2 points. Negative means the method made the image <i>worse</i> than doing nothing.
+  </div>
+
+  <h3>Finding 1: RAW training matters more than architecture</h3>
+  <p>Prior methods were retrained on the authors' RAW data and compared against their published 8-bit weights (run on an 8-bit version of the test set).</p>
+  <div class="btns" id="t2Metric">
+    <button class="on" data-x="t">Transmission (%↑ SSIMₜ)</button>
+    <button data-x="r">Reflection (%↑ SSIMᵣ)</button>
+  </div>
+  <div id="plotT2" class="plot"></div>
+  <div class="callout good">Retraining DSRNet, Zhu and Zhang on RAW improves them by <b>≈40 percentage points</b> SSIM<sub>t</sub>, while the differences <i>among</i> them are only <b>≈20 pp</b>. The authors' own models (2.5M parameters, versus 125M for DSRNet) score best: Ours+ctx reaches PSNR<sub>t</sub> 33.23 dB and SSIM<sub>t</sub> 95.7%.</div>
+  <details class="card"><summary style="cursor:pointer">Full Table 2 numbers</summary>
+    <table id="tbl2"></table>
+  </details>
+
+  <h3>Finding 2: every simulation ingredient helps</h3>
+  <p>The model was retrained on datasets (1.2M examples each) with one simulation feature removed, and tested on the full-simulation test set. Hover the bars.</p>
+  <div class="btns" id="t1Metric">
+    <button class="on" data-x="t">SSIMₜ</button><button data-x="r">SSIMᵣ</button>
+  </div>
+  <div id="plotT1" class="plot"></div>
+  <p class="muted" style="font-size:.9em"><b>Gamma:</b> images gamma-compressed before compositing. <b>Exposure:</b> t and r separately exposed. <b>Pose:</b> no constraint on tilt/field of view. <b>Fresnel:</b> no spatially varying attenuation. <b>WB:</b> separately white-balanced. <b>Blur:</b> no defocus or double reflection. <b>All:</b> everything removed. All differences are reported as significant. Removing everything (All+G) costs <b>−46 pp</b>, mirroring the +40 pp RAW-retraining benefit and exceeding the benefit of the context photo (+4 pp).</p>
+
+  <h3>Finding 3: the context photo is really used</h3>
+  <div class="grid3">
+    <div class="stat"><div class="big">95.7</div><div class="lbl">Ours+ctx SSIMₜ (real context)</div></div>
+    <div class="stat"><div class="big">95.1</div><div class="lbl">Ours+rnd SSIMₜ (random, unrelated context)</div></div>
+    <div class="stat"><div class="big">95.7</div><div class="lbl">Ours+rac SSIMₜ (true reflection given as context)</div></div>
+  </div>
+  <p>Feeding a random context photo is significantly worse than the real one (p &lt; 1.7e-11), so the model uses the content of c rather than just extra capacity. Giving it the exact reflection as context at test time doesn't help further — the context doesn't need to match the reflection, because the model was trained with disjoint crops. Visually, the context helps e.g. produce more correct, uniform color on an Egyptian tablet (Fig. 1).</p>
+
+  <h3>Finding 4: the upsampler beats prior upsampling</h3>
+  <p>Upsampling from 256p to 2048p, either from ground-truth low-res images (GT) or from the base model's actual outputs (end-to-end, E2E).</p>
+  <div class="btns" id="t3Metric">
+    <button class="on" data-x="pt">PSNR T</button><button data-x="st">SSIM T</button><button data-x="pr">PSNR R</button><button data-x="sr">SSIM R</button>
+  </div>
+  <div id="plotT3" class="plot"></div>
+  <p>The authors' upsampler reaches 47.77 dB PSNR<sub>T</sub> on GT inputs versus 42.24 for V-DESIRR with cycle-consistency. Removing the masking operations ("Ours-NM") drops it almost to V-DESIRR's level, showing masking is the key ingredient. Generic super-resolution models (SUPIR, Real-ESRGAN) score below even the "do nothing" control on SSIM. End-to-end: 30.62 vs 30.27 dB PSNR<sub>T</sub>. The upsampler uses 29% fewer parameters than V-DESIRR.</p>
+
+  <h3>Real photos and bonus abilities</h3>
+  <ul>
+    <li><b>In the wild:</b> museums, nature, shopping, a midday city, artwork — from cameras not used to build the training data. Published 8-bit models don't consistently remove these reflections; retrained on RAW they improve significantly, but still add blur and colored artifacts.</li>
+    <li><b>Subtle reflections:</b> on museum pieces (Rembrandt's "St. Matthew and the Angel", Ansel Adams' "Residents of Hornitos") the model recovers reflections hard to see with the naked eye — even revealing the photographer holding a phone. This is helped by RAW's bit depth (≥15-bit test images; 12- and 14-bit sources).</li>
+    <li><b>Lens flares:</b> the model can sometimes remove them, although no lens flares are in the training data.</li>
+    <li><b>Editing:</b> because both t and r are output, a photographer can recolor, rearrange, or partially restore the reflection (done in Photoshop with "Linear Dodge (Add)").</li>
+  </ul>
+</section>
+
+<!-- LIMITS -->
+<section id="limits">
+  <h2><span class="num">10</span>Limitations and open problems</h2>
+  <div class="grid2">
+    <div class="callout bad" style="margin:0"><b>Saturation → hole filling.</b> When t or r is so bright it pushes the other into the noise floor or clips it, the hidden content is gone; the problem becomes inpainting. Light sources can be missed or leave halos.</div>
+    <div class="callout bad" style="margin:0"><b>Overlapping textures.</b> When textured regions of t and r overlap (e.g. a stone wall reflected over a dress) errors occur. Color differences help; without them the model must repair or hallucinate.</div>
+    <div class="callout bad" style="margin:0"><b>Rare lighting.</b> Results are less consistent for interiors flooded with very strong light, and for nighttime scenes where indoor lights reflect over dark cityscapes — both rare in training data. Night-time source images could help.</div>
+    <div class="callout bad" style="margin:0"><b>Upsampling new detail.</b> High-frequency reflection textures invisible at 256p can be copied into the full-res transmission, since the low-res outputs can't guide them.</div>
+    <div class="callout bad" style="margin:0"><b>8-bit inputs.</b> Models are trained for RAW. On JPEGs (with gamma pseudo-inverted) removal works somewhat but is often incomplete, because camera pipelines apply diverse non-linear finishing. Testing on 8-bit benchmarks is not meaningful for this system.</div>
+    <div class="callout bad" style="margin:0"><b>Scope & simplifications.</b> Works best when glass covers the whole view; local reflections (shiny cars, distant windows) are left alone — usually desirable. Saturated sky in a context photo can cause errors. The double-reflection model assumes perfectly parallel panes. Unusual pairings (bathrooms reflected on beaches) remain in the data.</div>
+  </div>
+  <div class="callout warm"><b>Privacy note from the authors:</b> because the model can uncover reflections that are invisible to the eye, privacy should be protected.</div>
+</section>
+
+<section style="border:none">
+  <h2><span class="num">✓</span>Takeaway</h2>
+  <p>Simulate reflections the way physics does — in linear RAW units, with correct illuminant colors, brightness, Fresnel attenuation and geometry — and search millions of such simulations for realistic cases. Models trained only on this data generalize to real photos, and the choice of training data matters more than the choice of network. Add an optional look-behind photo and a mask-based upsampler, and you get a practical system that previews results at 1K in about five seconds on a phone or laptop.</p>
+</section>
+
+</main>
+<footer>Explainer based on "Removing Reflections from RAW Photos" (Kee, Pikielny, Blackburn-Matzen, Levoy; Adobe). Interactive toy images are illustrations, not paper results.</footer>
+
+<script>
+// ---------- Utility ----------
+const srgb = x => x<=0.0031308 ? 12.92*x : 1.055*Math.pow(x,1/2.4)-0.055;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+function fresnel(thDeg,k){
+  const th=thDeg*Math.PI/180;
+  if(th<1e-4) return Math.pow((k-1)/(k+1),2);
+  const tp=Math.asin(Math.sin(th)/k);
+  const s=Math.pow(Math.sin(th-tp),2)/Math.pow(Math.sin(th+tp),2);
+  const p=Math.pow(Math.tan(th-tp),2)/Math.pow(Math.tan(th+tp),2);
+  return 0.5*(s+p);
+}
+function toggleGroup(id,attr,cb){
+  const g=document.getElementById(id);
+  g.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cb(b.dataset[attr]);
+  }));
+}
+
+// ---------- Mixing demo ----------
+const W=300,H=200,N=W*H;
+const T=new Float32Array(N*3), R=new Float32Array(N*3);
+(function buildScenes(){
+  // Transmission: outdoor daylight street
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  const bld=[];let x=0;while(x<W){const w=25+rnd()*40;bld.push([x,w,50+rnd()*60,0.06+rnd()*0.25]);x+=w;}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=(y*W+x)*3;let r,g,b;
+    const sky=1.1-0.5*(y/H);r=0.75*sky;g=0.88*sky;b=1.08*sky;
+    for(const [bx,bw,bh,v] of bld){ if(x>=bx&&x<bx+bw&&y>H*0.62-bh){r=v;g=v*0.97;b=v*0.93;
+      if(((x-bx)%10<4)&&((y-(H*0.62-bh))%14<6)&&v<0.18){r=v*0.4;g=v*0.4;b=v*0.45;}}}
+    if(y>H*0.62){const s=0.03+0.12*((x/W));r=s;g=s*0.95;b=s*0.9;}
+    // dark tree
+    const dx=x-60,dy=y-110;if(dx*dx/900+dy*dy/1600<1){r=0.015;g=0.03;b=0.012;}
+    if(x>56&&x<64&&y>130&&y<H*0.75){r=0.02;g=0.015;b=0.01;}
+    T[i]=r;T[i+1]=g;T[i+2]=b;
+  }
+  // Reflection: dim indoor room with warm lamps (neutral reflectance; illuminant applied later)
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=(y*W+x)*3;let v=0.025+0.01*(1-y/H);let rr=v,gg=v,bb=v;
+    // picture frame
+    if(x>180&&x<250&&y>70&&y<120){rr=0.06;gg=0.03;bb=0.025;if(x>186&&x<244&&y>76&&y<114){rr=0.02;gg=0.05;bb=0.07;}}
+    // ceiling lamps
+    for(const cx of [50,150,250]){const ddx=(x-cx)/22,ddy=(y-16)/7;const d=ddx*ddx+ddy*ddy;if(d<1){rr=gg=bb=5;}else{const gl=0.25/(1+d*3);rr+=gl;gg+=gl;bb+=gl;}}
+    // floor lamp glow
+    const fx=(x-90)/14,fy=(y-120)/18;const fd=fx*fx+fy*fy;if(fd<1){rr=gg=bb=3.5;}else{const gl=0.5/(1+fd*1.5);rr+=gl;gg+=gl;bb+=gl;}
+    // person silhouette (photographer)
+    const px=(x-140)/14,py=(y-110)/16;if(px*px+py*py<1||(Math.abs(x-140)<22&&y>125)){rr=0.008;gg=0.008;bb=0.009;}
+    R[i]=rr;R[i+1]=gg;R[i+2]=bb;
+  }
+})();
+const WARM=[1.0,0.72,0.42];
+let mixMode='lin',wbMode='joint';
+function drawBuf(cv,buf,expo,toneFn){
+  const ctx=cv.getContext('2d');const im=ctx.createImageData(W,H);
+  for(let p=0;p<N;p++){for(let c=0;c<3;c++){let v=buf[p*3+c]*expo;v=toneFn?toneFn(v):srgb(clamp(v));im.data[p*4+c]=clamp(v)*255;}im.data[p*4+3]=255;}
+  ctx.putImageData(im,0,0);
+}
+function meanOf(buf){let s=0;for(let i=0;i<buf.length;i++)s+=buf[i];return s/buf.length;}
+const TAU=Math.pow((0.4+0.055)/1.055,2.4); // sRGB 0.4 -> linear
+function renderMix(){
+  const ang=+document.getElementById('ang').value, pw=+document.getElementById('pow').value, dbl=document.getElementById('dbl').checked;
+  document.getElementById('angVal').textContent=ang+'°';
+  document.getElementById('powVal').textContent=(pw>0?'+':'')+pw;
+  const a=fresnel(ang,1.5), beta=(1-a)*a*(1-a), gain=Math.pow(2,pw);
+  const ill = wbMode==='joint'?WARM:[1,1,1];
+  // reflection in camera units (illuminant applied)
+  const Rc=new Float32Array(N*3);
+  for(let p=0;p<N;p++)for(let c=0;c<3;c++)Rc[p*3+c]=R[p*3+c]*ill[c]*gain;
+  // display sources
+  drawBuf(document.getElementById('cvT'),T,TAU/meanOf(T));
+  drawBuf(document.getElementById('cvR'),Rc,TAU/meanOf(Rc));
+  const M=new Float32Array(N*3);
+  const shift=12;
+  if(mixMode==='lin'){
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;
+      for(let c=0;c<3;c++){let rv=a*Rc[p*3+c];
+        if(dbl){const xs=Math.min(W-1,x+shift),ys=Math.min(H-1,y+4);rv+=beta*Rc[(ys*W+xs)*3+c];}
+        M[p*3+c]=(1-a)*T[p*3+c]+rv;}}
+    drawBuf(document.getElementById('cvM'),M,TAU/meanOf(M));
+    document.getElementById('mixNote').innerHTML=`<b>Linear mixing.</b> Glass reflects α = ${(a*100).toFixed(1)}% here. The dim room is almost invisible over the bright sky, but lamps and the glow show up — especially over the dark tree and street. ${wbMode==='joint'?'The reflection keeps the <span style="color:#ffb45e">warm indoor color</span>, because colors mix before the camera\'s single white balance.':'Separate white balancing has removed the warm cast — a real camera with one white balance would not do this.'}`;
+  } else {
+    // heuristic: each image separately auto-exposed & tone mapped (shadow lift), then added in 8-bit
+    const tm=(buf)=>{const e=0.18/meanOf(buf);const o=new Float32Array(N*3);for(let i=0;i<N*3;i++){let v=srgb(clamp(buf[i]*e));o[i]=Math.pow(v,0.8);}return o;};
+    const t8=tm(T), r8=tm(Rc);const w=clamp(a*gain*4,0,0.9);
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;for(let c=0;c<3;c++){let rv=r8[p*3+c];
+      if(dbl){const xs=Math.min(W-1,x+shift),ys=Math.min(H-1,y+4);rv=0.7*rv+0.3*r8[(ys*W+xs)*3+c];}
+      M[p*3+c]=clamp(t8[p*3+c]+w*rv);}}
+    drawBuf(document.getElementById('cvM'),M,1,v=>v);
+    document.getElementById('mixNote').innerHTML=`<b>Heuristic 8-bit blending (illustrative).</b> Each image was separately exposed and tone-mapped, then added. The dim room is boosted to look as bright as the street, so the whole interior washes over the scene and bright sky regions clip toward white — the "overpowered highlights" the paper criticizes. Real light doesn't behave like this.`;
+  }
+}
+['ang','pow','dbl'].forEach(id=>document.getElementById(id).addEventListener('input',renderMix));
+toggleGroup('mixMode','m',v=>{mixMode=v;renderMix();});
+toggleGroup('wbMode','w',v=>{wbMode=v;renderMix();});
+renderMix();
+
+// ---------- ACR steps ----------
+const acr=[
+ ["Linearize (remove vignetting, black levels)","lin","Raw sensor data is cleaned up; values remain proportional to light."],
+ ["Demosaic","lin","Fills in full color at every pixel from the sensor's color filter mosaic."],
+ ["Subtract scalar black level","lin","Linear and still has the illuminant color — but colors are in a sensor-specific basis, so images from different cameras can't be summed here."],
+ ["Convert to XYZ color","chosen","✔ Linear, sensor-independent, and the illuminant color is preserved. This is where the paper simulates reflections."],
+ ["White balance","lin","Still linear, but the illuminant color has been removed. Scenes on both sides of glass are often lit by different light sources whose colors mix before white balancing, so mixing here is inaccurate."],
+ ["Convert to RGB color","lin","Linear RGB — the color space the models operate in (scene-referred, supports pre-trained perceptual losses)."],
+ ["Dehaze, tone map, texture, local contrast, hue…","non","Proprietary, non-linear and spatially varying. Cannot be modeled by a simple gamma curve, so summing finished images can't produce realistic reflections."],
+ ["Gamma compress → 8-bit","non","Produces the finished JPEG-like image. Pixel values are no longer linearly related to scene light."]
+];
+const sc=document.getElementById('acrSteps');
+acr.forEach((s,i)=>{const d=document.createElement('div');d.className='step '+(s[1]==='non'?'nonlinear':'linear')+(s[1]==='chosen'?' chosen':'');
+  d.innerHTML=`<div class="n">${i+1}</div><div><div>${s[0]} <span class="pill" style="${s[1]==='non'?'color:#ff7a7a;background:#3a2222':'color:#6fe0a3;background:#1f3a2c'}">${s[1]==='non'?'non-linear':'linear'}</span></div><div class="detail">${s[2]}</div></div>`;
+  d.addEventListener('click',()=>d.classList.toggle('open'));sc.appendChild(d);});
+
+// ---------- Fresnel plot ----------
+function renderFres(){
+  const ang=+document.getElementById('fAng').value,k=+document.getElementById('fK').value;
+  document.getElementById('fAngVal').textContent=ang+'°';document.getElementById('fKVal').textContent=k.toFixed(3);
+  const a=fresnel(ang,k);
+  document.getElementById('fA').textContent=(a*100).toFixed(2)+'%';
+  document.getElementById('fS').textContent=(Math.log2(a)).toFixed(2)+' stops';
+  document.getElementById('fT').textContent=((1-a)*100).toFixed(2)+'%';
+  document.getElementById('fB').textContent=(((1-a)*a*(1-a))*100).toFixed(2)+'%';
+  const xs=[],ys=[];for(let t=0;t<=89.5;t+=0.5){xs.push(t);ys.push(Math.log2(fresnel(t,k)));}
+  Plotly.react('fresPlot',[
+    {x:xs,y:ys,mode:'lines',line:{color:'#7cc4ff',width:3},name:'α (stops)'},
+    {x:[ang],y:[Math.log2(a)],mode:'markers',marker:{size:12,color:'#ffb45e'},name:'current'}
+  ],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#e8ecf3'},showlegend:false,
+    margin:{l:55,r:10,t:30,b:45},title:{text:'Reflected light vs. angle',font:{size:14}},
+    xaxis:{title:'angle of incidence θᵢ (°)',gridcolor:'#2b3242'},yaxis:{title:'reflection (stops, log₂ α)',gridcolor:'#2b3242',range:[-5,0.2]}},{displayModeBar:false,responsive:true});
+}
+['fAng','fK'].forEach(id=>document.getElementById(id).addEventListener('input',renderFres));
+renderFres();
+
+// ---------- Architecture ----------
+const arch={
+ raw:`<h3 style="margin-top:0">RAW reader</h3><p>Reads the captured RAW photo m and the optional context photo c, converting both to linear RGB (ACR Step 6) with the <i>same</i> white balance, so they share a scene-referred color space. Rectangular images are tiled for the 256² base model.</p>`,
+ base:`<h3 style="margin-top:0">Base model (256×256 pixels, ~2.5M parameters)</h3>
+ <ul><li><b>P-Net backbone:</b> EfficientNet-B1 (first stride changed to 1 so no early downsampling) computes multi-scale semantic features of m.</li>
+ <li><b>F-Net fusion:</b> a BiFPN feature pyramid fuses them back to 64 channels at full 256p resolution.</li>
+ <li><b>Context modulation:</b> c goes through the same networks (shared weights). A "paired-channel MLP" compares low-res features of c and m channel by channel and predicts affine transforms that modulate m's features (StyleGAN-style conv-mod-deconv). Modulation is <i>per channel</i>, not per pixel, because c doesn't share identical content with m.</li>
+ <li><b>Finishing head:</b> dilated convolutions (the head of Zhang et al.) render t and r — predicted independently rather than forcing t + r = m, to decouple failures.</li></ul>
+ <p>Trained from random weights with perceptual, adversarial, gradient/exclusion and L1 losses; Adam, lr 1e-4, batch 32 on 16 GPUs for 20 epochs. Inference at 256×341: 0.96 s (M1 MacBook Pro) / 1.04 s (iPhone 14 Pro).</p>`,
+ up:`<h3 style="margin-top:0">Upsampler (applied repeatedly up a Gaussian pyramid)</h3>
+ <ol><li>Project low-res m, t, r and the next-higher-res mixture M into feature space ϕ with small conv layers (no batch norm, to allow feature matching).</li>
+ <li><b>Match:</b> compare low-res ϕ<sub>t</sub> and ϕ<sub>r</sub> against ϕ<sub>m</sub>. Products of features are used because a product is large when features match, while a sum is large if either is. Generalized with predicted affines + sigmoid → per-pixel, per-channel masks I<sub>t</sub>, I<sub>r</sub>, refined by a joint mask predictor.</li>
+ <li><b>Resample masks 2×, multiply with high-res mixture features ϕ<sub>M</sub>.</b> This assumes "which layer a feature belongs to" varies slowly in space. Sharp detail comes straight from the real high-res photo.</li>
+ <li>Finishing convolutions render T and R.</li></ol>
+ <p>Trained with L1, L2, gradient, LPIPS and a cycle-consistency loss (downsampled output should match the low-res input). Preview at 1024×1364: 4.52 s (MacBook) / 6.53 s (iPhone 14 Pro). Output at 2048² and beyond.</p>`,
+ out:`<h3 style="margin-top:0">RAW writer</h3><p>Inverts ACR steps 3–6 to save the clean transmission <b>and</b> the reflection as new RAW images in linear color. Keeping the reflection lets users remix it — to fix the long tail of failures or for aesthetic effect.</p>`
+};
+document.querySelectorAll('.box').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.box').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');
+  document.getElementById('archInfo').innerHTML=arch[b.dataset.k];}));
+document.querySelector('.box[data-k=base]').click();
+
+const upTexts={
+ ours:`<p>At each pyramid level the model decides, at low resolution, <i>which features belong to t and which to r</i> — a mask. It upsamples only that mask (which is smooth) and uses it to <b>copy features directly from the real high-resolution mixture</b>. Because fine detail always comes from the actual photo rather than from previously generated output, errors don't compound from level to level, and sharp reflections aren't re-introduced.</p><p class="muted">Remaining failure: textures not visible at all at 256p (e.g. a reflected wall's fine texture) have no low-res guide and can be copied into the transmission.</p>`,
+ vd:`<p>V-DESIRR repeatedly upsamples its <i>own previous output images</i> and asks the network to infer which high-res details to add. Small errors made at low resolution are propagated and amplified at each step. The paper reports that its fast upsampler re-introduces sharp reflections (e.g. fence bars) and creates strong color artifacts around sharp edges — even after fine-tuning; adding cycle-consistency helped its scores but not these artifacts.</p>`
+};
+toggleGroup('upMode','u',v=>document.getElementById('upText').innerHTML=upTexts[v]);
+document.getElementById('upText').innerHTML=upTexts.ours;
+
+// ---------- Results plots ----------
+const layoutBase={paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#e8ecf3'},margin:{l:60,r:10,t:30,b:60},
+  legend:{orientation:'h',y:1.12},xaxis:{gridcolor:'#2b3242'},yaxis:{gridcolor:'#2b3242',zerolinecolor:'#9aa5b8'}};
+const cfg={displayModeBar:false,responsive:true};
+
+const t2={ // method: [rawPctT, rawPctR, pubPctT, pubPctR]
+ 'Ours+ctx':[70,77,null,null],'Ours':[66,74,null,null],'Zhu':[49,null,6,null],
+ 'DSRNet':[48,52,8,19],'Zhang':[28,25,-11,22],'CoRRN':[6,22,-17,-22]};
+function plotT2(which){
+  const ms=Object.keys(t2);const ix=which==='t'?0:1;
+  Plotly.react('plotT2',[
+    {x:ms,y:ms.map(m=>t2[m][ix]),type:'bar',name:'Trained on RAW simulation',marker:{color:'#6fe0a3'},text:ms.map(m=>t2[m][ix]==null?'n/a':(t2[m][ix]>0?'+':'')+t2[m][ix]),textposition:'outside'},
+    {x:ms,y:ms.map(m=>t2[m][ix+2]),type:'bar',name:'Published 8-bit weights',marker:{color:'#ff9a6a'},text:ms.map(m=>t2[m][ix+2]==null?'':(t2[m][ix+2]>0?'+':'')+t2[m][ix+2]),textposition:'outside'}
+  ],{...layoutBase,barmode:'group',yaxis:{...layoutBase.yaxis,title:'% improvement vs. control',range:[-30,90]}},cfg);
+}
+toggleGroup('t2Metric','x',plotT2);plotT2('t');
+
+const tbl2=[['Control (RAW)','21.74','85.8','12.48','49.0'],['Ours+ctx','33.23','95.7','30.17','88.2'],['Ours','32.15','95.2','29.18','86.7'],['Zhu (RAW)','29.84','92.8','—','—'],['DSRNet (RAW)','28.98','92.6','23.99','75.5'],['Zhang (RAW)','26.23','89.9','22.78','61.5'],['CoRRN (RAW)','22.75','86.7','18.31','60.4'],['Control (8-bit)','18.62','78.4','9.79','37.4'],['DSRNet (8-bit pub.)','19.99','80.0','16.98','49.3'],['Zhu (8-bit pub.)','19.84','79.7','—','—'],['Zhang (8-bit pub.)','18.65','75.9','17.37','51.0'],['CoRRN (8-bit pub.)','18.95','74.7','15.99','23.8'],['Ours+rac','33.20','95.7','30.20','88.3'],['Ours+rnd','32.42','95.1','29.29','86.7']];
+document.getElementById('tbl2').innerHTML='<tr><th>Method</th><th>PSNRₜ</th><th>SSIMₜ</th><th>PSNRᵣ</th><th>SSIMᵣ</th></tr>'+tbl2.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('');
+
+const t1={labels:['Full sim.','−Gamma','−Exposure','−Pose','−Fresnel','−WB','−Blur','All − G','All + G'],
+ t:[95.7,88.8,94.2,95.0,95.3,95.5,95.5,90.2,89.2],tp:[70,21,59,65,67,68,68,31,24],
+ r:[88.2,77.0,86.1,85.4,87.3,87.6,87.9,71.3,58.5],rp:[77,55,73,71,75,76,76,44,19]};
+function plotT1(which){
+  const y=t1[which],p=t1[which+'p'],ctrl=which==='t'?85.8:49.0;
+  Plotly.react('plotT1',[
+    {x:t1.labels,y:y,type:'bar',marker:{color:t1.labels.map((l,i)=>i===0?'#6fe0a3':(l.startsWith('All')?'#ff7a7a':'#7cc4ff'))},
+     text:y.map((v,i)=>v.toFixed(1)+' ('+p[i]+'%↑)'),textposition:'outside',hovertemplate:'%{x}: SSIM %{y}<extra></extra>'},
+    {x:[t1.labels[0],t1.labels[8]],y:[ctrl,ctrl],mode:'lines',line:{dash:'dash',color:'#9aa5b8'},name:'control (no removal)',hoverinfo:'skip'}
+  ],{...layoutBase,showlegend:false,yaxis:{...layoutBase.yaxis,title:'SSIM (%)',range:[which==='t'?80:40,100]},
+    annotations:[{x:t1.labels[8],y:ctrl,text:'control',showarrow:false,yshift:10,font:{color:'#9aa5b8'}}]},cfg);
+}
+toggleGroup('t1Metric','x',plotT1);plotT1('t');
+
+const t3=[['Ours',47.77,98.8,45.93,98.2],['Ours-NM',43.29,98.1,43.99,96.9],['V-DESIRR+C',42.24,97.9,38.32,93.8],['V-DESIRR',40.74,97.4,38.30,93.9],['Bicubic',31.98,85.1,41.58,96.0],['SUPIR',28.09,64.6,28.29,56.8],['Real-ESRGAN',23.72,65.6,23.11,53.6],['Control',19.50,86.3,13.13,64.5]];
+const t3e=[['Ours',30.62,95.2,28.53,90.7],['V-DESIRR+C',30.27,94.5,27.74,88.7]];
+function plotT3(which){
+  const ix={pt:1,st:2,pr:3,sr:4}[which];const isS=which[0]==='s';
+  Plotly.react('plotT3',[
+    {x:t3.map(r=>r[0]),y:t3.map(r=>r[ix]),type:'bar',name:'GT low-res input',marker:{color:t3.map(r=>r[0]==='Ours'?'#6fe0a3':r[0]==='Control'?'#555e70':'#7cc4ff')},text:t3.map(r=>r[ix]),textposition:'outside'},
+    {x:t3e.map(r=>r[0]+' (E2E)'),y:t3e.map(r=>r[ix]),type:'bar',name:'End-to-end with base model',marker:{color:'#ffb45e'},text:t3e.map(r=>r[ix]),textposition:'outside'}
+  ],{...layoutBase,yaxis:{...layoutBase.yaxis,title:isS?'SSIM (%)':'PSNR (dB)',range:isS?[40,105]:[0,55]}},cfg);
+}
+toggleGroup('t3Metric','x',plotT3);plotT3('pt');
+</script>
+</body>
+</html>

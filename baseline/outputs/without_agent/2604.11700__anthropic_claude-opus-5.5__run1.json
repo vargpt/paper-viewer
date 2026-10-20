@@ -1,0 +1,7 @@
+{
+  "model": "anthropic/claude-opus-5.5",
+  "paper": "2604.11700.pdf",
+  "input_tokens": 18334,
+  "output_tokens": 16917,
+  "finish_reason": "stop"
+}

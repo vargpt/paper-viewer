@@ -1,0 +1,7 @@
+{
+  "model": "anthropic/claude-opus-5.5",
+  "paper": "csbj.2025.01.007_race_detection_saliency.xml",
+  "input_tokens": 12877,
+  "output_tokens": 16478,
+  "finish_reason": "stop"
+}

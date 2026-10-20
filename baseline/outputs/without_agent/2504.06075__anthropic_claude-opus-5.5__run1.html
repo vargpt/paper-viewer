@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collaborative Prediction: Tractable Information Aggregation via Agreement</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --ink:#1f2328; --muted:#5b6370; --line:#e3e0d8;
+  --alice:#d9534f; --bob:#2f6fb3; --joint:#6b4fb3; --good:#2e8b57; --card:#ffffff;
+  --accent:#c98a1a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 Georgia,"Iowan Old Style","Times New Roman",serif}
+header{background:linear-gradient(135deg,#1f2a44,#3b2a55);color:#fff;padding:64px 24px 48px}
+header .wrap{max-width:900px;margin:auto}
+header h1{font-size:2.2em;line-height:1.2;margin:0 0 12px}
+header p.sub{font-size:1.15em;opacity:.9;margin:0 0 18px}
+header .authors{font-family:system-ui,sans-serif;font-size:.9em;opacity:.8}
+nav{position:sticky;top:0;background:#fffdf8ee;backdrop-filter:blur(6px);border-bottom:1px solid var(--line);z-index:10;font-family:system-ui,sans-serif;font-size:.85em}
+nav .wrap{max-width:900px;margin:auto;display:flex;gap:16px;overflow-x:auto;padding:10px 24px;white-space:nowrap}
+nav a{color:var(--muted);text-decoration:none}
+nav a:hover{color:var(--ink)}
+main{max-width:900px;margin:auto;padding:24px}
+section{margin:56px 0}
+h2{font-size:1.6em;border-bottom:2px solid var(--line);padding-bottom:6px}
+h3{font-size:1.2em;margin-top:28px}
+.alice{color:var(--alice);font-weight:bold}
+.bob{color:var(--bob);font-weight:bold}
+.joint{color:var(--joint);font-weight:bold}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:20px 0;box-shadow:0 1px 3px #0000000a}
+.callout{border-left:4px solid var(--accent);background:#fff8ea;padding:14px 18px;border-radius:0 10px 10px 0;margin:20px 0}
+.eq{font-family:"Cambria Math","STIX Two Math",Georgia,serif;background:#f4f2ec;border-radius:8px;padding:12px 16px;margin:12px 0;overflow-x:auto;font-size:1.02em}
+.plain{font-family:system-ui,sans-serif;font-size:.92em;color:var(--muted)}
+.ui{font-family:system-ui,sans-serif;font-size:.9em}
+button{font-family:system-ui,sans-serif;font-size:.9em;border:1px solid #bbb;background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:#f0eee8}
+button.on{background:#1f2a44;color:#fff;border-color:#1f2a44}
+select,input[type=range]{font-family:system-ui,sans-serif;vertical-align:middle}
+table{border-collapse:collapse;width:100%;font-family:system-ui,sans-serif;font-size:.88em}
+td,th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+th{color:var(--muted);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}header h1{font-size:1.6em}}
+.chat{font-family:system-ui,sans-serif;font-size:.9em}
+.msg{display:flex;margin:6px 0}
+.msg .bubble{padding:8px 12px;border-radius:14px;max-width:80%}
+.msg.a{justify-content:flex-start}.msg.a .bubble{background:#fbe3e2;border:1px solid #f1b9b7}
+.msg.b{justify-content:flex-end}.msg.b .bubble{background:#dfeaf7;border:1px solid #b2cbe8}
+.truth{text-align:center;color:var(--good);font-weight:bold;margin-top:8px}
+.bitbtn{width:60px;height:60px;font-size:1.4em;border-radius:12px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-family:system-ui,sans-serif;font-size:.8em;background:#eee;margin-right:4px}
+.tabs button{margin:0 6px 6px 0}
+.tabpane{display:none}.tabpane.show{display:block}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding-left:44px;margin:14px 0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:#1f2a44;color:#fff;font-family:system-ui;display:flex;align-items:center;justify-content:center;font-size:.9em}
+footer{text-align:center;color:var(--muted);font-family:system-ui,sans-serif;font-size:.8em;padding:40px 20px}
+.small{font-size:.85em}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <h1>Collaborative Prediction: Tractable Information Aggregation via Agreement</h1>
+  <p class="sub">How two parties who each see only <em>part</em> of the picture can reach predictions as good as if they had pooled their data — by trading nothing but their guesses.</p>
+  <div class="authors">Natalie Collina, Ira Globus-Harris, Surbhi Goel, Varun Gupta, Aaron Roth, Mirah Shi · University of Pennsylvania · arXiv:2504.06075 (April 2025)</div>
+</div></header>
+
+<nav><div class="wrap">
+  <a href="#problem">1. Problem</a><a href="#agree">2. Agreement ≠ aggregation</a><a href="#idea">3. Key idea</a>
+  <a href="#math">4. The definitions</a><a href="#demo">5. Try it</a><a href="#weak">6. Weak learning</a>
+  <a href="#results">7. Results</a><a href="#lower">8. Why each piece is needed</a><a href="#limits">9. Limitations</a>
+</div></nav>
+
+<main>
+
+<section id="problem">
+<h2>1. The problem: two halves of the same story</h2>
+<p>Picture two parties — call them <span class="alice">Alice</span> and <span class="bob">Bob</span> — who observe <em>different features about the same example</em> and both want to predict the same label. The paper gives several situations where simply pooling the features into one big model is not an option:</p>
+<div class="grid2">
+  <div class="card"><b>Human + AI.</b> A doctor notices patient demeanor, mood, even smell — hard to formalize. A model has learned from vast data the doctor can't use. Neither side's features are <em>legible</em> to the other.</div>
+  <div class="card"><b>Legal constraints.</b> In regulated industries like healthcare, data may not be shareable for contractual or legal reasons (the motivation for "vertically federated learning").</div>
+  <div class="card"><b>Bandwidth.</b> The data may be so high-dimensional that sending it all is impractical.</div>
+  <div class="card"><b>Multi-modal expertise.</b> One party holds CT scans, another holds physician notes. Each has tools for its own modality, none for both together.</div>
+</div>
+<p>The goal: an <b>interaction protocol</b> in which Alice and Bob never share features, only their <b>label predictions</b>, and yet end up with predictions as accurate as the best model in some class defined on the <span class="joint">joint</span> feature space.</p>
+</section>
+
+<section id="agree">
+<h2>2. A classic idea — and why it isn't enough</h2>
+<p><b>Aumann's agreement theorem</b> (1976) says two perfect Bayesians with a common prior who have common knowledge of each other's beliefs cannot "agree to disagree." Later work (Geanakoplos–Polemarchakis 1982, Aaronson 2005) showed that just exchanging beliefs back and forth makes them agree, quickly.</p>
+<p>But <b>agreement does not imply information aggregation</b>. The paper's footnote gives the cleanest example. Click the bits below:</p>
+<div class="card ui">
+  <div style="display:flex;gap:30px;flex-wrap:wrap;align-items:center">
+    <div style="text-align:center"><div class="alice">Alice sees x<sub>A</sub></div><button class="bitbtn" id="bitA">0</button></div>
+    <div style="text-align:center"><div class="bob">Bob sees x<sub>B</sub></div><button class="bitbtn" id="bitB">1</button></div>
+    <div style="flex:1;min-width:240px">
+      <p style="margin:0">Label: <b>y = x<sub>A</sub> + x<sub>B</sub> mod 2</b> (XOR), all bits uniform.</p>
+      <p style="margin:4px 0"><span class="alice">Alice's belief</span> P[y=1] = <b>½</b> &nbsp; <span class="bob">Bob's belief</span> P[y=1] = <b>½</b></p>
+      <p style="margin:4px 0">They agree perfectly… and the truth is <b id="xorY">1</b>.</p>
+    </div>
+  </div>
+  <p class="plain" style="margin-bottom:0">Whatever the bits are, each party alone believes ½, so they "agree" instantly — yet if they pooled their bits they would know y with certainty.</p>
+</div>
+<p>There is also a practical issue: Bayesian agreement results assume both parties share a <em>perfect, common prior</em> and can perform exact Bayes updates — implausible computationally and epistemically. Earlier work by some of the same authors (Collina et al. 2025) replaced Bayesian rationality with tractable <em>calibration</em> conditions, but said nothing about information aggregation. This paper closes that gap.</p>
+</section>
+
+<section id="idea">
+<h2>3. The key idea in one picture</h2>
+<div class="card">
+<ol class="steps">
+  <li>Each day an example arrives. <span class="alice">Alice</span> sees x<sub>A</sub>, <span class="bob">Bob</span> sees x<sub>B</sub>.</li>
+  <li>They talk for <b>K rounds</b>, alternating. Each round, the speaker announces a single number: their prediction of the label, computed from <em>their own features</em> plus everything said so far.</li>
+  <li>Each party learns <b>conditionally on what the other just said</b>. Concretely, they make sure their predictions are as good as their best model <em>within each group of days where the other party said roughly the same thing</em>. This is called <b>conversation swap regret</b>.</li>
+  <li>A <b>"boosting" theorem</b> then says: once they (approximately) agree, the agreed-upon predictions are as good as the best <span class="joint">joint</span> model — provided a mild <b>weak learning condition</b> holds.</li>
+  <li>The final prediction is the last round's. The label is revealed, and both update their learners.</li>
+</ol>
+</div>
+<div class="callout">Because only (bounded-precision) predictions are exchanged, <b>communication does not depend on the dimension of the data</b>. And each party only ever runs <em>its own</em> learning algorithm on <em>its own</em> data — the protocol is an efficient <b>reduction from two-party learning to single-party learning</b>.</div>
+</section>
+
+<section id="math">
+<h2>4. The definitions, in plain language</h2>
+<p>Write <span class="alice">H<sub>A</sub></span> for a class of models using only Alice's features (e.g. bounded linear functions of x<sub>A</sub>), <span class="bob">H<sub>B</sub></span> similarly for Bob, and <span class="joint">H<sub>J</sub></span> for a class on the joint features (e.g. linear functions of (x<sub>A</sub>, x<sub>B</sub>)). Labels are in [0,1] and error is squared error. The setting is <b>online and adversarial</b>: no distributional assumptions at all.</p>
+
+<h3>Goal: no regret to the joint class</h3>
+<div class="eq">Σ<sub>t</sub> (ŷ<sub>t</sub> − y<sub>t</sub>)² &nbsp;≤&nbsp; Σ<sub>t</sub> (h(x<sub>t</sub>) − y<sub>t</sub>)² + (small) &nbsp;&nbsp; for every h ∈ H<sub>J</sub></div>
+<p class="plain">"Over the whole sequence, our total error is not much worse than the best joint model chosen in hindsight" — even though nobody ever sees the joint features. The "small" term should grow slower than T (sublinear), so the average gap vanishes.</p>
+
+<h3>Swap regret: being good on every slice of your own predictions</h3>
+<div class="eq">For every value v you predicted: &nbsp; Σ<sub>t: ŷ<sub>t</sub>=v</sub> (ŷ<sub>t</sub> − y<sub>t</sub>)² &nbsp;≤&nbsp; min<sub>h∈H</sub> Σ<sub>t: ŷ<sub>t</sub>=v</sub> (h(x<sub>t</sub>) − y<sub>t</sub>)²</div>
+<p class="plain">Group the days by what you predicted. On each group, no model in your class would have done better. This is stronger than ordinary ("external") regret, which only compares totals over all days.</p>
+
+<h3>Conversation swap regret: slice by what the other person said too</h3>
+<div class="eq">For each round k, each bucket of the <em>other party's</em> previous message (round k−1), and each value v of your own message: no model in your class beats you on those days.</div>
+<p class="plain">This forces each party to genuinely <em>use</em> what they hear. If Bob just said "0.5" and Alice's features can predict the label better on days where Bob says 0.5, Alice must exploit that. The paper shows this implies the "conversation calibration" condition of Collina et al. 2025, which in turn implies fast approximate agreement.</p>
+
+<h3>The weak learning condition</h3>
+<div class="eq">On any distribution: if some h<sub>J</sub> ∈ H<sub>J</sub> beats the best constant by γ, then some h<sub>A</sub> ∈ H<sub>A</sub> or h<sub>B</sub> ∈ H<sub>B</sub> beats the best constant by at least w(γ).</div>
+<p class="plain">"Whenever the joint class can find <em>any</em> signal beyond the average, at least one party alone can find <em>some</em> signal." It is "weak" because the individual improvement w(γ) may be far smaller than γ. It generalizes a condition from Globus-Harris et al. (2023) on multicalibration and boosting.</p>
+
+<h3>The boosting theorem (Theorem 3.3)</h3>
+<div class="eq">avg error(ŷ) − min<sub>h<sub>J</sub></sub> avg error(h<sub>J</sub>) &nbsp;≤&nbsp; 2·w<sup>−1</sup>( f(T)/T ) + 3·q(T)/T</div>
+<p class="plain">If one single sequence of predictions has low swap regret to <em>both</em> H<sub>A</sub> and H<sub>B</sub> (up to an L1 perturbation q, "distance to swap regret"), and weak learning holds, then that sequence has low regret to the joint class. Intuition from the proof: if the joint class could improve on some slice of the predictions, weak learning says Alice's or Bob's class could also improve on that slice — contradicting swap regret.</p>
+
+<div class="callout"><b>Putting it together (Section 4).</b> If both parties have low conversation swap regret, then for large enough K there is some round k where Alice's and Bob's consecutive predictions are close on most days (Theorem 4.1). That round's predictions have low distance to swap regret w.r.t. H<sub>A</sub> ∪ H<sub>B</sub> (Theorem 4.2). Error cannot increase much in later rounds, so the <em>final</em> round inherits the joint-class guarantee (Theorem 4.3). Notably, the protocol keeps talking for all K rounds even after agreement, so the guarantee applies to a single well-defined round.</div>
+</section>
+
+<section id="demo">
+<h2>5. Try it: a simplified two-party protocol</h2>
+<p class="plain">This sandbox implements a <b>simplified version of the paper's batch algorithm</b> (Section 6, COLLABORATE + CROSS-BOOST) with 1-D linear regression as each party's learner. It omits the inner INTERNAL-BOOST loop. The paper itself contains no experiments — this is purely an illustration of the mechanism on toy data, including two constructions taken from the paper.</p>
+<div class="card ui">
+  <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+    <label>Dataset:
+      <select id="ds">
+        <option value="cancel">Noise cancellation (paper's Thm 8.1)</option>
+        <option value="additive">Additive linear signal + noise</option>
+        <option value="xor">XOR (paper's footnote 1)</option>
+      </select></label>
+    <label>Grid m = <b id="mval">10</b> <input type="range" id="m" min="4" max="20" step="2" value="10"></label>
+    <button id="resample">Resample data</button>
+  </div>
+  <p id="dsdesc" class="plain"></p>
+  <div id="mseplot" style="height:340px"></div>
+  <div class="grid2">
+    <div><table id="tbl"></table></div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>One example's conversation</b> <button id="newex">New example</button></div>
+      <div class="chat" id="chat"></div>
+    </div>
+  </div>
+  <details class="plain" style="margin-top:12px"><summary>How each round works here</summary>
+  <p>Round 0: Bob fits a line to y using x<sub>B</sub> and announces rounded predictions (multiples of 1/m). In each later round the speaker groups the examples by the value the other party just announced (a <em>level set</em>). On each group they fit their own line using only their own feature. If it beats simply repeating the other's value by more than 1/m², they use it; otherwise they "agree" with the other's value on that group. The process stops when a round changes nothing — exactly the halting rule of COLLABORATE.</p></details>
+</div>
+</section>
+
+<section id="weak">
+<h2>6. When does weak learning hold? (and how weak is it?)</h2>
+<p><b>Theorem 3.6.</b> If Alice's and Bob's classes are bounded (|f| ≤ C, C ≥ ½), star-shaped (closed under shrinking), include intercepts, and the joint class is their <b>Minkowski sum</b> (h<sub>J</sub>(x) = h<sub>A</sub>(x<sub>A</sub>) + h<sub>B</sub>(x<sub>B</sub>)), then weak learning holds with</p>
+<div class="eq">w(γ) = γ² / (16 C²)</div>
+<p class="plain">In particular, norm-bounded linear functions on each side satisfy it relative to bounded linear functions on the joint space. Proof idea: a joint predictor that helps must be correlated with the label, so one of its two halves is correlated with the label; a suitably scaled-down copy of that half gives a (quadratically smaller) gain.</p>
+<p><b>Is the square necessary?</b> Theorem 3.8 says yes. Its construction: x<sub>A</sub> = ξ<sub>A</sub>/2, x<sub>B</sub> = x<sub>A</sub> + ξ<sub>B</sub>/(2ρ), y = ξ<sub>B</sub>, with random signs ξ. The difference x<sub>B</sub> − x<sub>A</sub> cancels the noise, but a bounded joint predictor can only use a scaled-down version. Drag ρ:</p>
+<div class="card ui">
+  <label>ρ = <b id="rhoval">4</b> <input type="range" id="rho" min="1" max="30" step="0.5" value="4" style="width:60%"></label>
+  <div id="rhoplot" style="height:330px"></div>
+  <p id="rhotxt" class="plain"></p>
+</div>
+<p class="plain">The joint gain shrinks like 1/ρ while the best individual gain shrinks like 1/ρ², so no w(γ) growing faster than γ² can work. With unbounded weights (Theorem 3.7) the joint predictor achieves a gain of 1 while Bob's gain 1/(ρ²+1) can be made arbitrarily small — so boundedness is necessary too. And Theorem A.1 shows <em>multiplicative</em> joint classes (h<sub>A</sub>·h<sub>B</sub>) can fail weak learning entirely: with y = x<sub>A</sub>x<sub>B</sub> on random signs, neither side alone has any signal.</p>
+</section>
+
+<section id="results">
+<h2>7. What the paper proves</h2>
+<div class="tabs ui" id="restabs">
+  <button class="on" data-t="r1">Online regression</button><button data-t="r2">Decisions (high-dim)</button><button data-t="r3">Batch setting</button><button data-t="r4">Back to Bayesians</button>
+</div>
+<div class="card">
+<div class="tabpane show" id="r1">
+  <h3 style="margin-top:0">Online, adversarial, real-valued labels</h3>
+  <ul>
+    <li><b>Efficient reductions.</b> Any online learner with external-regret guarantees for H can be turned into one with swap regret (Garg et al. 2024), and the paper turns that into one with <em>conversation</em> swap regret (Algorithm 2: run a separate copy for each round and each bucket of the other party's last message).</li>
+    <li><b>End-to-end (Theorem 4.6).</b> If H<sub>A</sub>, H<sub>B</sub> have efficient sublinear-regret online learners and satisfy weak learning w.r.t. H<sub>J</sub>, and the conversation length K grows (not constant) but sublinearly, then the final predictions have <b>o(T) regret</b> to the best joint model.</li>
+    <li><b>Linear case (Theorem 4.9).</b> Using the Azoury–Warmuth online linear regression algorithm, with K = T<sup>3/28</sup> the regret to the best bounded joint linear model is Õ(T<sup>55/56</sup>·√(max(C²,C)·d·log(T<sup>15/56</sup>/ρ))) with probability 1−ρ.</li>
+    <li><b>Tradeoff (Remark 4.7).</b> Longer conversations improve the bound but cost more daily communication and computation.</li>
+  </ul>
+</div>
+<div class="tabpane" id="r2">
+  <h3 style="margin-top:0">High-dimensional outcomes: talk in actions</h3>
+  <p>When outcomes live in [0,1]<sup>d</sup>, asking for swap regret on the predictions themselves would inherit exponential dependence on d. Instead, each party keeps an internal prediction but only announces its <b>best-response action</b> BR<sub>u</sub>(ŷ) = argmax<sub>a</sub> u(a, ŷ) for a known utility u (linear and Lipschitz in the outcome — e.g. any expected-utility maximizer over d states).</p>
+  <ul>
+    <li>Parties are required to be <b>decision calibrated</b> and <b>decision cross-calibrated</b> (from Zhao et al., Noarov et al., Lu et al.) conditional on the other's last action.</li>
+    <li>A decision version of weak learning and boosting (Theorem 5.16) applies.</li>
+    <li><b>Theorem 5.21:</b> with K = ω(1) and K = o(√T), the final actions have o(T) regret to the best joint policy. Bounds and communication depend only <b>polynomially</b> on d and the number of actions |A|.</li>
+  </ul>
+</div>
+<div class="tabpane" id="r3">
+  <h3 style="margin-top:0">Batch (i.i.d.) setting: a simpler algorithm</h3>
+  <p>A two-party generalization of "level-set boosting" (Globus-Harris et al. 2023), using only a squared-error regression oracle for each party's own class — the algorithm the demo above simplifies.</p>
+  <ul>
+    <li><b>Convergence (Theorem 6.10):</b> COLLABORATE halts within R = m² rounds; each inner boosting run within m² sub-rounds (squared error drops by ≥ 1/m² per round).</li>
+    <li><b>In-sample accuracy (Theorem 6.11):</b> excess error over the best joint model ≤ 2·w<sup>−1</sup>(3/m).</li>
+    <li><b>Generalization (Theorem 6.12):</b> holds once n ≥ O((m<sup>7</sup> d log(md) + log(1/δ))/ε²), with d the pseudodimension of H<sub>J</sub>.</li>
+    <li><b>Test-time compute:</b> to predict a new example, the parties replay a polynomial-length conversation using their stored model transcripts.</li>
+  </ul>
+</div>
+<div class="tabpane" id="r4">
+  <h3 style="margin-top:0">Lifting to one-shot Bayesian agreement</h3>
+  <p>Perfect Bayesians with a correct common prior are unbiased conditional on any event, so they automatically have (near) zero expected conversation swap regret. Imagining an arbitrarily long i.i.d. sequence and using permutation invariance, the online theorems transfer to a <b>single conversation</b>.</p>
+  <ul>
+    <li><b>Theorem 7.7:</b> after K rounds, expected excess error vs. the best model in H<sub>J</sub> is O(w<sup>−1</sup>(K<sup>−1/3</sup>)), for classes with finite fat-shattering dimension satisfying weak learning.</li>
+    <li><b>Linear (Remark 7.8):</b> O(C·K<sup>−1/6</sup>) for bounded linear classes — for <em>any</em> prior.</li>
+    <li>The authors describe this as the first <b>distribution-agnostic</b> information aggregation theorem in the agreement literature: unlike Frongillo et al. (2023), no assumption ("information substitutes") on the prior is needed.</li>
+  </ul>
+</div>
+</div>
+</section>
+
+<section id="lower">
+<h2>8. Why each ingredient is needed (Section 8)</h2>
+<div class="tabs ui" id="lowtabs">
+  <button class="on" data-t="l1">Interaction</button><button data-t="l2">Weak learning</button><button data-t="l3">Swap (not external) regret</button><button data-t="l4">vs. information substitutes</button>
+</div>
+<div class="card">
+<div class="tabpane show" id="l1">
+  <p><b>Theorem 8.1.</b> Take x<sub>A</sub> = ξ<sub>A</sub>, x<sub>B</sub> = ξ<sub>A</sub> + ξ<sub>B</sub>, y = ξ<sub>B</sub> (random signs). Alice's best linear predictor is the constant 0 (error 1), Bob's is x<sub>B</sub>/2 (error 1/4), and the joint linear predictor x<sub>B</sub> − x<sub>A</sub> is perfect (error 0). Since Alice's optimal predictor is constant, <b>no function of the two optimal individual predictions</b> can beat 1/4. "Late fusion" fails; the demo's first dataset shows interaction recovers the signal.</p>
+  <p class="plain">This also circumvents a "no-free-lunch" barrier for non-interactive human-AI aggregation (Peng, Garg, Kleinberg 2024).</p>
+</div>
+<div class="tabpane" id="l2">
+  <p><b>Theorem 8.2.</b> If a triple (H<sub>A</sub>, H<sub>B</sub>, H<sub>J</sub>) fails weak learning, there's a distribution where the joint class beats the constant but neither individual class does. Then always predicting the best constant has zero swap regret to both individual classes — yet positive regret to the joint class. So weak learning is not just sufficient for the boosting step but necessary.</p>
+</div>
+<div class="tabpane" id="l3">
+  <p><b>Theorem 8.6.</b> Bits x<sub>A</sub>, x<sub>B</sub> ∈ {0,1} uniform, y = x<sub>A</sub>·x<sub>B</sub>. Consider predicting ŷ = x<sub>A</sub>/2.</p>
+  <table>
+    <tr><th>Predictor</th><th>Expected squared error</th></tr>
+    <tr><td>ŷ = x<sub>A</sub>/2 (our sequence)</td><td>1/8</td></tr>
+    <tr><td>Best linear in x<sub>A</sub>: x<sub>A</sub>/2</td><td>1/8</td></tr>
+    <tr><td>Best linear in x<sub>B</sub>: x<sub>B</sub>/2</td><td>1/8</td></tr>
+    <tr><td>Best joint linear: (x<sub>A</sub>+x<sub>B</sub>)/2 − 1/4</td><td>1/16</td></tr>
+  </table>
+  <p>The sequence has zero <em>external</em> regret to both individual classes but regret 1/16 to the joint class — even though linear classes satisfy weak learning. <span class="plain">(Swap regret catches this: on the days where ŷ = ½, i.e. x<sub>A</sub> = 1, the label equals x<sub>B</sub>, which Bob's class predicts exactly.)</span></p>
+</div>
+<div class="tabpane" id="l4">
+  <p>Frongillo et al. (2023) proved agreement implies Bayes-optimality under an <b>information substitutes</b> condition (diminishing marginal value of information). The paper shows its weak learning condition is <b>strictly weaker</b>: information substitutes implies weak learning with w(γ) = γ/2 (Lemma 8.4), but bounded linear functions on [−1,1] satisfy weak learning (with w = Θ(γ²)) while violating information substitutes (Corollary 8.5).</p>
+</div>
+</div>
+</section>
+
+<section id="limits">
+<h2>9. Limitations and open questions</h2>
+<div class="card">
+<ul>
+  <li><b>Honest participants.</b> The protocols assume both parties follow them faithfully. The authors flag strategic manipulation — e.g. a capable AI deceptively steering outcomes — as a crucial open direction requiring strategy-proof designs.</li>
+  <li><b>Which classes satisfy weak learning?</b> The positive results cover bounded, star-shaped classes with a Minkowski-sum joint class (linear-like). Boundedness is necessary, and multiplicative interactions can break the condition. Extending beyond this structure is open.</li>
+  <li><b>Worst-case rates.</b> Guarantees are against adversarial sequences, and the rates are slow (e.g. T<sup>55/56</sup> for linear functions; K<sup>−1/6</sup> in the Bayesian linear case). Beyond-worst-case models (smoothed analysis, selective prediction) might yield tighter bounds and fewer rounds.</li>
+  <li><b>No empirical evaluation yet.</b> The paper is theoretical; the authors suggest multi-modal learning as a first testbed for scalability, performance, and communication efficiency.</li>
+  <li><b>Squared error / linear utilities.</b> The real-valued results use squared error; the decision extension assumes utilities linear and Lipschitz in the outcome.</li>
+</ul>
+</div>
+<div class="callout"><b>Bottom line.</b> Simple exchanges of predictions — no features, no cryptography, no common prior — can provably reach the accuracy of the best joint model in a rich class, as long as each party learns conditionally on what it hears and a mild weak learning condition holds. Interaction, weak learning, and swap-style regret are each shown to be essential.</div>
+</section>
+</main>
+
+<footer>Interactive explainer of arXiv:2504.06075. The sandbox in §5 is a simplified illustration, not an experiment from the paper.</footer>
+
+<script>
+// ---------- XOR toy ----------
+(function(){
+  let a=0,b=1;
+  const A=document.getElementById('bitA'),B=document.getElementById('bitB'),Y=document.getElementById('xorY');
+  function up(){A.textContent=a;B.textContent=b;Y.textContent=(a+b)%2;}
+  A.onclick=()=>{a=1-a;up()};B.onclick=()=>{b=1-b;up()};up();
+})();
+
+// ---------- tabs ----------
+function tabs(id){
+  const box=document.getElementById(id);
+  box.querySelectorAll('button').forEach(btn=>{
+    btn.onclick=()=>{
+      box.querySelectorAll('button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');
+      const panes=box.nextElementSibling.querySelectorAll('.tabpane');
+      panes.forEach(p=>p.classList.toggle('show',p.id===btn.dataset.t));
+    };
+  });
+}
+tabs('restabs');tabs('lowtabs');
+
+// ---------- demo ----------
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+let seed=7;
+function gauss(r){let u=r()||1e-9,v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const clip=v=>Math.max(0,Math.min(1,v));
+const N=3000;
+const desc={
+ cancel:"From Theorem 8.1: x_A = ξ_A, x_B = ξ_A + ξ_B, y = (ξ_B + 1)/2 with random signs ξ (label rescaled to [0,1]). Alice's features alone say nothing about y; combining the two optimal individual predictors can't beat Bob alone, yet the joint linear model is perfect.",
+ additive:"x_A, x_B uniform on [−1,1] (correlated), y = 0.5 + 0.25·x_A + 0.2·x_B + noise, clipped to [0,1]. Each party sees a piece of an additive signal.",
+ xor:"From footnote 1: x_A, x_B random bits, y = x_A XOR x_B. Each party alone predicts ½ — and so does the best additive joint linear model, so the weak-learning benchmark itself has no signal here. The protocol (correctly) halts at once."
+};
+function gen(ds){
+  const r=rng(seed);const xa=[],xb=[],y=[];
+  for(let i=0;i<N;i++){
+    if(ds==='cancel'){const a=r()<.5?-1:1,b=r()<.5?-1:1;xa.push(a);xb.push(a+b);y.push((b+1)/2);}
+    else if(ds==='additive'){const a=2*r()-1,z=2*r()-1;const b=0.6*a+0.8*z;xa.push(a);xb.push(b);y.push(clip(0.5+0.25*a+0.2*b+0.08*gauss(r)));}
+    else{const a=r()<.5?0:1,b=r()<.5?0:1;xa.push(a);xb.push(b);y.push((a+b)%2);}
+  }
+  return {xa,xb,y};
+}
+function fit1(x,y,idx){
+  let mx=0,my=0;idx.forEach(i=>{mx+=x[i];my+=y[i]});mx/=idx.length;my/=idx.length;
+  let c=0,v=0;idx.forEach(i=>{c+=(x[i]-mx)*(y[i]-my);v+=(x[i]-mx)**2});
+  const s=v>1e-12?c/v:0;return {s,b:my-s*mx};
+}
+function ols(cols,y){ // with intercept, ridge tiny
+  const p=cols.length+1,n=y.length;const X=i=>[1,...cols.map(c=>c[i])];
+  const M=Array.from({length:p},()=>Array(p+1).fill(0));
+  for(let i=0;i<n;i++){const xi=X(i);for(let a=0;a<p;a++){for(let b=0;b<p;b++)M[a][b]+=xi[a]*xi[b];M[a][p]+=xi[a]*y[i];}}
+  for(let a=0;a<p;a++)M[a][a]+=1e-6;
+  for(let a=0;a<p;a++){let piv=a;for(let r=a+1;r<p;r++)if(Math.abs(M[r][a])>Math.abs(M[piv][a]))piv=r;[M[a],M[piv]]=[M[piv],M[a]];
+    for(let r=0;r<p;r++)if(r!==a){const f=M[r][a]/M[a][a];for(let c=a;c<=p;c++)M[r][c]-=f*M[a][c];}}
+  const w=M.map((row,a)=>row[p]/row[a]);
+  const pred=[];for(let i=0;i<n;i++){const xi=X(i);pred.push(xi.reduce((s,v,k)=>s+v*w[k],0));}
+  return pred;
+}
+const mse=(p,y)=>p.reduce((s,v,i)=>s+(v-y[i])**2,0)/y.length;
+let D,P,stopNote,exIdx=0;
+function run(){
+  const ds=document.getElementById('ds').value,m=+document.getElementById('m').value;
+  document.getElementById('mval').textContent=m;document.getElementById('dsdesc').textContent=desc[ds];
+  D=gen(ds);const {xa,xb,y}=D;const all=[...Array(N).keys()];
+  const R=v=>Math.round(clip(v)*m)/m;
+  const f0=fit1(xb,y,all);P=[xb.map(x=>R(f0.b+f0.s*x))];
+  const errs=[mse(P[0],y)];stopNote='';
+  for(let r=1;r<=20;r++){
+    const feat=r%2===1?xa:xb,prev=P[r-1],groups={};
+    prev.forEach((v,i)=>{const k=Math.round(v*m);(groups[k]=groups[k]||[]).push(i)});
+    const nw=prev.slice();
+    for(const k in groups){const idx=groups[k],v=k/m;
+      const f=fit1(feat,y,idx);let ef=0,ev=0;
+      idx.forEach(i=>{ef+=(clip(f.b+f.s*feat[i])-y[i])**2;ev+=(v-y[i])**2});ef/=idx.length;ev/=idx.length;
+      if(ev-ef>1/(m*m))idx.forEach(i=>nw[i]=R(f.b+f.s*feat[i]));
+    }
+    if(nw.every((v,i)=>v===prev[i])){stopNote=`Halted after round ${r-1}: round ${r} would change nothing (agreement).`;break;}
+    P.push(nw);errs.push(mse(nw,y));
+  }
+  // benchmarks
+  const mean=y.reduce((a,b)=>a+b,0)/N;const cst=y.map(()=>mean);
+  const pA=ols([xa],y),pB=ols([xb],y),pJ=ols([xa,xb],y),pL=ols([pA,pB],y);
+  const bm=[['Best constant',mse(cst,y),'#999'],['Alice alone (linear in x_A)',mse(pA,y),'#d9534f'],['Bob alone (linear in x_B)',mse(pB,y),'#2f6fb3'],['Late fusion (linear combo of the two)',mse(pL,y),'#c98a1a'],['Joint linear, pooled features (benchmark)',mse(pJ,y),'#6b4fb3']];
+  const xs=errs.map((_,i)=>i);
+  const traces=[{x:xs,y:errs,mode:'lines+markers',name:'Protocol (after round r)',line:{color:'#2e8b57',width:3},marker:{size:9,color:xs.map(i=>i%2===0?'#2f6fb3':'#d9534f')},
+    text:xs.map(i=>i%2===0?'Bob spoke':'Alice spoke'),hovertemplate:'Round %{x} (%{text})<br>MSE %{y:.4f}<extra></extra>'}];
+  const xmax=Math.max(3,xs.length);
+  bm.forEach(b=>traces.push({x:[0,xmax],y:[b[1],b[1]],mode:'lines',name:b[0],line:{dash:'dot',color:b[2],width:2},hovertemplate:b[0]+': %{y:.4f}<extra></extra>'}));
+  Plotly.newPlot('mseplot',traces,{margin:{t:20,r:10,l:55,b:45},xaxis:{title:'Conversation round (blue dot = Bob, red = Alice)',dtick:1},yaxis:{title:'Mean squared error',rangemode:'tozero'},legend:{font:{size:10},orientation:'h',y:-0.25},font:{family:'system-ui'}},{displayModeBar:false,responsive:true});
+  let h='<tr><th>Predictor</th><th>MSE</th></tr>';
+  bm.forEach(b=>h+=`<tr><td>${b[0]}</td><td>${b[1].toFixed(4)}</td></tr>`);
+  h+=`<tr><td><b>Protocol, final round</b></td><td><b>${errs[errs.length-1].toFixed(4)}</b></td></tr>`;
+  h+=`<tr><td colspan="2" class="small">${stopNote||'Reached round cap (20).'}</td></tr>`;
+  document.getElementById('tbl').innerHTML=h;
+  showEx();
+}
+function fmt(v){return (+v).toFixed(3).replace(/0+$/,'').replace(/\.$/,'')}
+function showEx(){
+  const {xa,xb,y}=D;const i=exIdx%N;
+  let h=`<div class="plain">Alice sees x<sub>A</sub> = ${fmt(xa[i])}; Bob sees x<sub>B</sub> = ${fmt(xb[i])}</div>`;
+  P.forEach((p,r)=>{const bob=r%2===0;h+=`<div class="msg ${bob?'b':'a'}"><div class="bubble"><b>${bob?'Bob':'Alice'}</b> (round ${r}): "I predict ${fmt(p[i])}"</div></div>`});
+  h+=`<div class="truth">True label: ${fmt(y[i])}</div>`;
+  document.getElementById('chat').innerHTML=h;
+}
+document.getElementById('ds').onchange=run;
+document.getElementById('m').oninput=run;
+document.getElementById('resample').onclick=()=>{seed=Math.floor(Math.random()*1e9);run()};
+document.getElementById('newex').onclick=()=>{exIdx=Math.floor(Math.random()*N);showEx()};
+run();
+
+// ---------- rho plot ----------
+(function(){
+  const rs=[];for(let r=1;r<=30;r+=0.25)rs.push(r);
+  const J=r=>(4*r-1)/(4*r*r),Bg=r=>1/(r*r+1),W=r=>J(r)**2/16;
+  function draw(){
+    const rho=+document.getElementById('rho').value;document.getElementById('rhoval').textContent=rho;
+    Plotly.react('rhoplot',[
+      {x:rs,y:rs.map(J),name:'Joint (bounded linear) gain γ',line:{color:'#6b4fb3',width:3}},
+      {x:rs,y:rs.map(Bg),name:"Bob's best gain",line:{color:'#2f6fb3',width:3}},
+      {x:rs,y:rs.map(W),name:'Guarantee w(γ)=γ²/16 (C=1)',line:{color:'#c98a1a',dash:'dash'}},
+      {x:[rho,rho,rho],y:[J(rho),Bg(rho),W(rho)],mode:'markers',marker:{size:11,color:['#6b4fb3','#2f6fb3','#c98a1a']},showlegend:false,hoverinfo:'skip'}
+    ],{margin:{t:10,r:10,l:60,b:45},xaxis:{title:'ρ (noise-cancellation strength)'},yaxis:{title:'gain over best constant',type:'log'},legend:{orientation:'h',y:-0.3,font:{size:11}},font:{family:'system-ui'}},{displayModeBar:false,responsive:true});
+    document.getElementById('rhotxt').innerHTML=`At ρ = ${rho}: joint gain γ = ${J(rho).toFixed(4)}, Bob's best gain = ${Bg(rho).toFixed(4)}, Alice's gain = 0. Ratio Bob/joint = ${(Bg(rho)/J(rho)).toFixed(3)} (shrinks like 1/ρ), while Bob/γ² stays bounded — the quadratic margin is the right order.`;
+  }
+  document.getElementById('rho').oninput=draw;draw();
+})();
+</script>
+</body>
+</html>

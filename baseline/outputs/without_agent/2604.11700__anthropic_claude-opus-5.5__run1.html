@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Do Radiologists Want From Explainable AI? An Interactive Guide</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  :root{
+    --bg:#f7f6f2; --ink:#1d2430; --muted:#5b6575; --accent:#2b6cb0; --accent2:#c05621;
+    --card:#ffffff; --line:#e3e0d8; --res:#3182ce; --sen:#dd6b20; --good:#2f855a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Georgia,"Times New Roman",serif;background:var(--bg);color:var(--ink);line-height:1.65;font-size:18px}
+  header{background:linear-gradient(135deg,#1a365d,#2b6cb0);color:#fff;padding:64px 20px 48px;text-align:center}
+  header h1{font-size:2.2rem;margin:0 0 12px;max-width:900px;margin-inline:auto;line-height:1.25}
+  header p{max-width:760px;margin:0 auto;opacity:.92;font-size:1.05rem}
+  header .authors{font-family:system-ui,sans-serif;font-size:.85rem;opacity:.8;margin-top:16px}
+  nav{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);z-index:10;font-family:system-ui,sans-serif;font-size:.85rem;text-align:center;padding:8px 6px}
+  nav a{color:var(--accent);text-decoration:none;margin:0 9px;white-space:nowrap;display:inline-block;padding:2px 0}
+  main{max-width:960px;margin:0 auto;padding:20px}
+  section{margin:44px 0}
+  h2{font-size:1.65rem;border-bottom:3px solid var(--accent);display:inline-block;padding-bottom:4px;margin-bottom:10px}
+  h3{font-size:1.2rem;margin-top:28px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:18px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .callout{background:#ebf4ff;border-left:5px solid var(--accent);padding:14px 18px;border-radius:6px;margin:18px 0}
+  .warn{background:#fffaf0;border-left:5px solid var(--accent2);padding:14px 18px;border-radius:6px;margin:18px 0}
+  .ui{font-family:system-ui,sans-serif;font-size:.92rem}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:18px 0}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;text-align:center;font-family:system-ui,sans-serif}
+  .stat b{display:block;font-size:2rem;color:var(--accent)}
+  .stat span{font-size:.85rem;color:var(--muted)}
+  .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  button.tab{font-family:system-ui,sans-serif;font-size:.88rem;border:1px solid var(--accent);background:#fff;color:var(--accent);padding:7px 14px;border-radius:20px;cursor:pointer}
+  button.tab.active,button.tab:hover{background:var(--accent);color:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr} header h1{font-size:1.6rem}}
+  .method{cursor:pointer;border:2px solid var(--line);border-radius:10px;padding:12px;background:#fff;font-family:system-ui,sans-serif;font-size:.9rem;transition:.15s}
+  .method:hover{border-color:var(--accent)}
+  .method.active{border-color:var(--accent);background:#ebf4ff}
+  .method small{color:var(--muted);display:block}
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  #methodDetail{min-height:150px}
+  .pipeline{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+  .stage{flex:1;min-width:150px;background:#fff;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;font-family:system-ui,sans-serif;font-size:.9rem;text-align:center;position:relative}
+  .stage.active{border-color:var(--accent2);background:#fffaf0}
+  .stage b{display:block;font-size:1.4rem;color:var(--accent2)}
+  .sections9{display:grid;grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:8px}
+  .sec{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;font-family:system-ui,sans-serif;font-size:.8rem}
+  .sec.active{background:var(--accent);color:#fff}
+  .sec b{display:block;font-size:1.2rem}
+  canvas{border:1px solid var(--line);border-radius:8px;background:#111;max-width:100%}
+  input[type=range]{width:100%}
+  .legend-dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:middle}
+  .quiz-opt{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-family:system-ui,sans-serif;font-size:.92rem}
+  .quiz-opt:hover{border-color:var(--accent)}
+  .quiz-opt.picked{border-color:var(--accent);background:#ebf4ff}
+  .reveal{display:none;margin-top:10px}
+  table{border-collapse:collapse;width:100%;font-family:system-ui,sans-serif;font-size:.9rem}
+  td,th{border-bottom:1px solid var(--line);padding:8px;text-align:left}
+  footer{text-align:center;font-family:system-ui,sans-serif;font-size:.8rem;color:var(--muted);padding:30px 20px 50px}
+  .tag{font-family:system-ui,sans-serif;font-size:.72rem;background:#edf2f7;color:var(--muted);padding:2px 8px;border-radius:10px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>What Do Radiologists Actually Want From “Explainable” AI?</h1>
+  <p>An interactive walkthrough of a survey of 46 radiologists about how machine-learning models that read medical images should explain themselves, and the design guidelines the authors draw from it.</p>
+  <div class="authors">Ketabi, Wagner, Ertl-Wagner, Jamieson &amp; Khalvati · The Hospital for Sick Children / University of Toronto / Vector Institute · arXiv 2604.11700</div>
+</header>
+
+<nav>
+  <a href="#problem">Problem</a><a href="#methods">Explanation types</a><a href="#survey">The survey</a><a href="#results">Results</a><a href="#trust">Trust</a><a href="#deploy">Deployment</a><a href="#guidelines">Guidelines</a><a href="#metrics">Evaluating explanations</a><a href="#limits">Limitations</a>
+</nav>
+
+<main>
+
+<section id="problem">
+  <h2>1. The problem: good AI that nobody uses</h2>
+  <p>Machine-learning (ML) models can classify images, outline tumours (segmentation), and even draft radiology reports, sometimes performing on par with radiologists. Yet they have <em>not been widely adopted</em> in real clinical work.</p>
+  <p>The paper points to one major reason: <strong>lack of explainability</strong>. If a radiologist can’t understand <em>why</em> a model said “tumour”, they can’t check it, and they stay out of the loop. The authors describe explainability as one ingredient of the broader idea of <em>trust</em>, alongside performance, confidence and fairness.</p>
+  <div class="callout">
+    <strong>The gap the paper targets:</strong> Many explanation tools have been built from the <em>developers’</em> point of view, with little systematic checking by clinicians. Earlier user studies existed, but each focused on a single imaging modality or use case (e.g. chest X-rays, brain tumour grading, prostate lesions). The authors describe their work as, to their knowledge, the first radiologist-centred study spanning <strong>multiple imaging modalities and clinical tasks</strong>.
+  </div>
+  <p>Their plan: ask radiologists directly, analyse the answers (including separating junior <em>residents</em> from <em>senior radiologists</em>), and turn the findings into practical design guidelines for ML researchers.</p>
+</section>
+
+<section id="methods">
+  <h2>2. Background: the menu of explanation methods</h2>
+  <p>The paper groups existing explanation techniques into two families. Click each one to see what it means in plain language.</p>
+  <div class="btnrow ui">
+    <span><span class="legend-dot" style="background:#3182ce"></span>Self-explainable (built into the model during training)</span>
+    <span style="margin-left:14px"><span class="legend-dot" style="background:#dd6b20"></span>Post-hoc (applied after training)</span>
+  </div>
+  <div class="mgrid" id="methodGrid"></div>
+  <div class="card" id="methodDetail"></div>
+</section>
+
+<section id="survey">
+  <h2>3. What the researchers did</h2>
+  <div class="stats">
+    <div class="stat"><b>46</b><span>participants (26 radiologists + 20 residents)</span></div>
+    <div class="stat"><b>30</b><span>questions in 9 sections</span></div>
+    <div class="stat"><b>28 / 2</b><span>multiple-choice / free-text questions</span></div>
+    <div class="stat"><b>~20 min</b><span>average completion time</span></div>
+  </div>
+  <p>The questionnaire was built in Microsoft Forms and distributed within a university Department of Radiology, reaching radiologists from different hospitals in one metropolitan area. In 11 of the multiple-choice questions an “other” box let people add their own answer. Click a section to see what it asked.</p>
+  <div class="sections9" id="sections9"></div>
+  <div class="card ui" id="secDetail"></div>
+
+  <h3>Who answered?</h3>
+  <div class="grid2">
+    <div class="card">
+      <p class="ui" style="margin-top:0"><strong>Experience mix.</strong> Residents were the largest group (43%), and senior radiologists with more than 10 years of experience the second largest (30%). So the sample is weighted toward the two ends of the experience spectrum, useful for comparing novices with veterans.</p>
+      <p class="ui">Most participants worked in <strong>Abdominal</strong> and <strong>Neuroimaging</strong> divisions, and <strong>CT</strong> and <strong>MRI</strong> were the most common modalities.</p>
+    </div>
+    <div class="card">
+      <p class="ui" style="margin-top:0"><strong>ML familiarity.</strong> 52% had no significant ML experience, and 26% knew ML concepts at a basic level. Only a few had applied ML in research or practice. Most had basic statistics knowledge.</p>
+      <p class="ui">Takeaway: most respondents were <em>not</em> familiar with how ML models work internally. That is exactly the audience explanations must serve.</p>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <h2>4. Results: what radiologists want</h2>
+
+  <h3>4.1 Where should ML help?</h3>
+  <p><strong>43 of 46</strong> said they are interested in using ML in their clinical workflow, mostly to increase efficiency and speed; some also said it could eventually improve accuracy.</p>
+  <div class="card">
+    <p class="ui" style="margin-top:0">The most frequently chosen tasks were:</p>
+    <ul class="ui">
+      <li>Workflow management</li>
+      <li>Performing routine and tedious diagnostic tasks</li>
+      <li>Flagging urgent / emergent findings</li>
+    </ul>
+    <p class="ui">Very few chose <em>“aiding in diagnosing rare or difficult cases.”</em></p>
+    <p class="ui">In open-ended answers, the most common response (13%) was improving efficiency, for example reporting <strong>normal cases</strong> without significant findings. Others mentioned acting as a double-reader, catching subtle findings, segmentation and flagging urgent cases. Participants said they <em>hoped, but weren’t sure</em>, ML could help with differential diagnosis, rare cases and report preparation.</p>
+  </div>
+  <div class="callout">In short, radiologists mostly want ML as a <strong>“helping hand”</strong> for routine work, freeing up their time for the hard cases, rather than as an oracle for the hardest ones.</div>
+
+  <h3>4.2 How do radiologists explain things to <em>each other</em>?</h3>
+  <p>Before asking what AI should do, the survey asked what radiologists themselves use to justify a diagnosis to colleagues or physicians.</p>
+  <div class="card"><div id="toolsChart" style="height:300px"></div></div>
+  <p>Separately, 18 participants said examples of <strong>similar cases/patients</strong> “sometimes” help their decisions, and 15 said they use them “in most cases.” This hints at why showing representative cases (prototypes) might be useful.</p>
+
+  <h3>Why do they want explainability?</h3>
+  <p>The most common reason was <strong>“to have confidence and trust in using the ML model.”</strong> Other frequent reasons were <em>to understand and validate the features driving the model’s output</em> and <em>to express a degree of certainty in the radiological report</em>.</p>
+
+  <h3>4.3 What makes a model explainable? Residents vs. seniors</h3>
+  <p>This is a key finding. Toggle between groups to compare the percentages reported in the paper.</p>
+  <div class="btnrow">
+    <button class="tab active" data-g="both">Compare both</button>
+    <button class="tab" data-g="res">Residents only</button>
+    <button class="tab" data-g="sen">Senior radiologists only</button>
+  </div>
+  <div class="card"><div id="factorChart" style="height:340px"></div>
+  <p class="ui" style="color:var(--muted);margin-bottom:0">Only factors for which the paper reports exact percentages are plotted. The paper also says both groups chose “generating textual explanations” and “showing representative cases,” and that “counterfactual explanations” was the least-selected option overall (33%).</p></div>
+  <div class="warn">
+    <strong>The surprise: SRTCS.</strong> <em>Standardized Radiologic Terminology and Classification Systems</em> are the scoring systems radiologists already use, such as BI-RADS for breast imaging. <strong>86% of senior radiologists</strong> picked “offering SRTCS” as important for explainability, while <strong>no residents</strong> did. Seniors want the model to speak <em>their</em> established language.
+  </div>
+  <p>Overall, senior radiologists considered a <strong>broader range</strong> of factors necessary than residents did. Both groups ranked “focusing on relevant features” (e.g. radiomics, which are quantitative imaging features) and “visual heatmaps of model attention” highly.</p>
+</section>
+
+<section id="trust">
+  <h2>5. Explainability and trust</h2>
+  <div class="stats">
+    <div class="stat"><b>42 / 46</b><span>say explainability is a prerequisite for trust</span></div>
+  </div>
+  <p>Aspects most often seen as boosting <em>both</em> explainability and trust were transparent data preprocessing and curation, transparent model training (e.g. hyperparameter fine-tuning), and a feedback mechanism that lets users adjust predictions. Being integrated into existing software (e.g. an image viewer) was <em>not</em> widely chosen as a factor for explainability or trust.</p>
+
+  <h3>Try it: the model disagrees with you</h3>
+  <div class="card">
+    <p class="ui" style="margin-top:0"><strong>You’re a radiologist. An ML model’s diagnosis contradicts yours. What do you do?</strong> Pick an answer, then see what participants said.</p>
+    <button class="quiz-opt" data-q="a">Ignore the model. I don’t trust it at all.</button>
+    <button class="quiz-opt" data-q="b">Look at the explanations the model provides.</button>
+    <button class="quiz-opt" data-q="c">Consult colleagues or the literature.</button>
+    <button class="quiz-opt" data-q="d">Switch to the model’s answer.</button>
+    <div class="reveal ui" id="quizReveal">
+      <div class="callout" style="margin-bottom:0">
+        <p style="margin-top:0" id="quizMsg"></p>
+        <p>Most participants said they would <strong>not completely reject</strong> the model. Instead they would seek more information before deciding:</p>
+        <ul>
+          <li><strong>16 residents</strong> and <strong>10 senior radiologists</strong> would analyse the model’s explanations.</li>
+          <li>Unlike residents, a high number of senior radiologists would also consult colleagues or the relevant literature.</li>
+          <li>Only <strong>3 participants</strong> said they would not trust the model diagnosis at all.</li>
+        </ul>
+        <p style="margin-bottom:0">This is why explanations matter: they are the evidence radiologists reach for when they disagree with the model.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="deploy">
+  <h2>6. Evaluation and deployment concerns</h2>
+  <p>Major concerns raised were <strong>bias in data/training</strong> (a fairness risk), lack of trust, lack of explainability, and insufficient accuracy. Senior radiologists were far more worried about bias:</p>
+  <div class="grid2">
+    <div class="card"><div id="biasChart" style="height:260px"></div></div>
+    <div class="card"><div id="biasReveal" style="height:260px"></div></div>
+  </div>
+  <p>Only half of the seniors believe an explainable model can better reveal data or model bias; the other half are unsure. The authors flag this as needing further investigation.</p>
+
+  <h3>How they judge an ML model</h3>
+  <p>In order of priority: <strong>(1)</strong> task performance, <strong>(2)</strong> the model’s confidence in its results, <strong>(3)</strong> the quality of its explanations in highlighting task-relevant features.</p>
+
+  <div class="card"><div id="deployChart" style="height:320px"></div></div>
+  <div class="callout">
+    <strong>Two notable findings:</strong>
+    <ul style="margin-bottom:0">
+      <li>About 70% said a model performing <em>similar to</em> radiologists (not necessarily better) could be integrated, provided other requirements are met.</li>
+      <li>Unexpectedly, most said a model that consistently performs comparably to radiologists but <em>lacks explainability</em> could still potentially be incorporated. And while software integration wasn’t seen as boosting trust, 65% called it a <em>necessary requirement</em> for clinical use (e.g. inside PACS, the Picture Archiving and Communication System).</li>
+    </ul>
+  </div>
+</section>
+
+<section id="guidelines">
+  <h2>7. The proposed design guidelines</h2>
+  <p>From the responses, the authors propose guidelines across four stages of the ML pipeline. Click a stage.</p>
+  <div class="pipeline" id="pipeline"></div>
+  <div class="card ui" id="stageDetail"></div>
+
+  <h3>Gaps the authors see in current research</h3>
+  <table>
+    <tr><th>Gap</th><th>What the survey suggests</th></tr>
+    <tr><td>Tasks chosen without clinicians</td><td>Identify tasks in close consultation with radiologists; build supportive tools across many tasks rather than replacing one aspect of their work.</td></tr>
+    <tr><td>Explaining only the output</td><td>Also make data sources, preprocessing and model configuration transparent, which may also help expose bias.</td></tr>
+    <tr><td>SRTCS rarely used</td><td>Few works use radiologist scoring systems as explanations; provide them alongside heatmaps and text, likely via multimodal models.</td></tr>
+    <tr><td>Bias detection unclear</td><td>Research whether explanations can uncover data biases and communicate them to radiologists.</td></tr>
+    <tr><td>Unclear fidelity</td><td>Post-hoc methods’ fidelity is unclear; self-explainable attention also needs further study.</td></tr>
+  </table>
+</section>
+
+<section id="metrics">
+  <h2>8. How to grade an explanation</h2>
+  <p>The authors propose four metrics for assessing an explainability tool: <strong>alignment with clinical evidence</strong>, <strong>fidelity</strong>, <strong>robustness</strong>, and <strong>effect on radiologist performance</strong>. The two toys below illustrate the first two ideas.</p>
+  <div class="warn ui"><strong>Note:</strong> these are simplified, made-up illustrations of the <em>concepts</em>. They are not data or models from the paper.</div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">Alignment: does the heatmap overlap the radiologist’s outline?</h3>
+      <canvas id="alignCanvas" width="320" height="240"></canvas>
+      <label class="ui">Move the model’s heatmap: <input type="range" id="alignSlider" min="0" max="160" value="40"></label>
+      <p class="ui" id="alignOut"></p>
+      <p class="ui" style="color:var(--muted)">The green outline is a radiologist’s manual segmentation mask. The paper suggests reporting the overlap between explanation-highlighted areas and such radiologist-provided information.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Fidelity: does hiding the highlighted area change the prediction?</h3>
+      <canvas id="fidCanvas" width="320" height="240"></canvas>
+      <div class="btnrow">
+        <button class="tab active" id="fidA">Explanation A</button>
+        <button class="tab" id="fidB">Explanation B</button>
+        <button class="tab" id="fidMask">Hide highlighted area</button>
+      </div>
+      <p class="ui" id="fidOut"></p>
+      <p class="ui" style="color:var(--muted)">In this toy, the “model” secretly relies on the lower-right region. Perturbing a highlighted feature and watching the prediction is the fidelity test the paper describes: a large impact means the explanation really reflects what the model used.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <p style="margin-top:0"><strong>Why fidelity matters for bias:</strong> if an explanation faithfully shows <em>everything</em> the model uses, including <em>spurious</em> features, it could expose hidden data biases, partly addressing the seniors’ top concern. Whether such spurious correlations really correspond to data biases needs significant experiments, the authors note.</p>
+    <p><strong>Robustness:</strong> explanations should stay consistent across settings, such as scanner shifts. One practical check is to add adversarial noise to training data and see whether the explanation changes much; insignificant changes suggest some robustness.</p>
+    <p style="margin-bottom:0"><strong>Effect on radiologist performance:</strong> ultimately, measure whether the explanation improves the user’s performance in the clinical task, for example by identifying accurate imaging features to include in reports.</p>
+  </div>
+</section>
+
+<section id="limits">
+  <h2>9. Limitations (as stated by the authors)</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Small sample.</strong> The number of participants was low; more responses would improve generalizability.</li>
+      <li><strong>Trust under-explored.</strong> Lack of trust emerged as a major concern among senior radiologists, but the survey did not include enough questions on trust.</li>
+      <li><strong>Confidence not treated as explanation.</strong> Participants rated model confidence as important for evaluation, but the survey wasn’t designed to treat it as a form of explainability; this is left to future work.</li>
+      <li>Participants came from hospitals in a single metropolitan area, through one university radiology department.</li>
+      <li>Survey data and analysis code are stated to be released upon acceptance.</li>
+    </ul>
+  </div>
+  <div class="callout">
+    <strong>Bottom line.</strong> The participating radiologists defined explainability as a model’s ability to <em>focus on clinically relevant imaging features</em> and provide <em>multiple forms of explanation</em>: SRTCS scores, visual heatmaps and textual reasoning. Senior radiologists were more conservative and more concerned about bias. The authors argue that earning their trust should be a top priority in model development.
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Interactive summary of “Exploring Radiologists’ Expectations of Explainable Machine Learning Models in Medical Image Analysis” (Ketabi et al.). Numbers shown are those reported in the paper; the canvas demos in Section 8 are illustrative only.
+</footer>
+
+<script>
+// ---------- Methods ----------
+const methods = [
+ {n:"Attention-based",f:"self",d:"The model learns attention weights during training that produce a <b>heatmap</b> showing which parts of the image it focused on for a prediction."},
+ {n:"Concept-based",f:"self",d:"Links the prediction to <b>high-level clinical concepts</b>. These can be textual semantic features or standardized radiologic scoring systems (SRTCS) such as BI-RADS."},
+ {n:"Prototype-based",f:"self",d:"Explains a decision by <b>comparing the case to representative examples</b> (prototypes): “this looks like these known cases.”"},
+ {n:"Textual reasoning",f:"self",d:"Generates <b>natural-language explanations</b> alongside the prediction, for example with a language transformer."},
+ {n:"Counterfactual",f:"self",d:"Applies <b>minimal changes</b> to imaging features to flip the output, creating a contrastive example: “if this were different, the answer would change.” This was the least-selected option in the survey (33%)."},
+ {n:"Gradient-based (e.g. Grad-CAM)",f:"post",d:"Applied after training. It uses the <b>gradient of the output with respect to the input</b>, i.e. how sensitive the prediction is to each pixel, to highlight important regions."},
+ {n:"Perturbation-based (e.g. LIME)",f:"post",d:"Applied after training. It <b>changes parts of the input</b> and watches how the prediction shifts to estimate each feature’s contribution."}
+];
+const mg=document.getElementById('methodGrid'), md=document.getElementById('methodDetail');
+methods.forEach((m,i)=>{
+  const el=document.createElement('div'); el.className='method';
+  el.style.borderLeft='6px solid '+(m.f==='self'?'#3182ce':'#dd6b20');
+  el.innerHTML='<b>'+m.n+'</b><small>'+(m.f==='self'?'Self-explainable':'Post-hoc')+'</small>';
+  el.onclick=()=>{document.querySelectorAll('.method').forEach(x=>x.classList.remove('active'));el.classList.add('active');
+    md.innerHTML='<h3 style="margin-top:0">'+m.n+' <span class="tag">'+(m.f==='self'?'self-explainable':'post-hoc')+'</span></h3><p>'+m.d+'</p>'+
+    (m.f==='post'?'<p class="ui" style="color:var(--muted)">The paper’s guidelines note that post-hoc methods such as Grad-CAM are “not highly reliable,” since they rely on external algorithms to find informative features.</p>':'<p class="ui" style="color:var(--muted)">Built into training. The paper notes this could be more valid than post-hoc methods, though how faithfully attention reveals model decisions still needs investigation.</p>');};
+  mg.appendChild(el); if(i===0) setTimeout(()=>el.click(),0);
+});
+
+// ---------- 9 sections ----------
+const secs=[
+ ["Radiological experience","Years of experience, to separate residents from senior radiologists."],
+ ["Specialty","Main clinical/radiological focus area and the imaging modality used there."],
+ ["Stats & ML knowledge","Two questions on familiarity with statistics, data analysis and ML concepts."],
+ ["Clinical tasks","Which clinical tasks ML models would be useful for."],
+ ["Diagnostic workflow","Whether they consult similar cases, and which tools they use to explain diagnoses to colleagues (imaging features, internet, articles…)."],
+ ["Explainability requirements","Why they want explainability, whether models must be trained on radiologist-marked regions of interest (ROIs), and what elements make a model explainable."],
+ ["Explainability & trust","Whether steps like transparent preprocessing, transparent architecture or a feedback mechanism make a model explainable and/or trustworthy."],
+ ["Model validation","What matters when evaluating a model (performance, explanations, confidence), what they do when the model contradicts them, and which validation types are needed (multi-site, prospective)."],
+ ["Usability","Main concerns about integration, overall interest, need for integration into software like PACS, plus open-ended fields on useful and uncertain applications."]
+];
+const s9=document.getElementById('sections9'), sd=document.getElementById('secDetail');
+secs.forEach((s,i)=>{const el=document.createElement('div');el.className='sec';el.innerHTML='<b>'+(i+1)+'</b>'+s[0];
+ el.onclick=()=>{document.querySelectorAll('.sec').forEach(x=>x.classList.remove('active'));el.classList.add('active');sd.innerHTML='<strong>Section '+(i+1)+': '+s[0]+'.</strong> '+s[1];};
+ s9.appendChild(el); if(i===5) setTimeout(()=>el.click(),0);});
+
+// ---------- Charts ----------
+const font={family:'system-ui,sans-serif',size:13};
+Plotly.newPlot('toolsChart',[{type:'bar',orientation:'h',
+  y:['Review articles','Original research articles','Information from the Internet','Important imaging features'],
+  x:[59,59,65,96],marker:{color:['#90cdf4','#90cdf4','#63b3ed','#2b6cb0']},text:['59%','59%','65%','96% (44 people)'],textposition:'auto'}],
+ {title:{text:'Tools radiologists use to explain a diagnosis',font},margin:{l:210,r:20,t:40,b:40},xaxis:{range:[0,100],title:'% of participants'},font,paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)'},{displayModeBar:false,responsive:true});
+
+const fac=['Focus on relevant features<br>(e.g. radiomics)','Visual heatmaps of<br>model attention','Offering SRTCS<br>(e.g. BI-RADS)'];
+const resV=[70,65,0], senV=[86,79,86];
+function drawFactors(g){
+  const tr=[];
+  if(g!=='sen') tr.push({type:'bar',name:'Residents',x:fac,y:resV,marker:{color:'#3182ce'},text:resV.map(v=>v+'%'),textposition:'outside'});
+  if(g!=='res') tr.push({type:'bar',name:'Senior radiologists',x:fac,y:senV,marker:{color:'#dd6b20'},text:senV.map(v=>v+'%'),textposition:'outside'});
+  Plotly.react('factorChart',tr,{barmode:'group',yaxis:{range:[0,105],title:'% selecting factor'},margin:{t:20,b:80,l:60,r:10},font,legend:{orientation:'h',y:1.12},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)'},{displayModeBar:false,responsive:true});
+}
+drawFactors('both');
+document.querySelectorAll('button[data-g]').forEach(b=>b.onclick=()=>{document.querySelectorAll('button[data-g]').forEach(x=>x.classList.remove('active'));b.classList.add('active');drawFactors(b.dataset.g);});
+
+Plotly.newPlot('biasChart',[{type:'bar',x:['Residents','Senior radiologists'],y:[45,86],marker:{color:['#3182ce','#dd6b20']},text:['45%','86%'],textposition:'outside'}],
+ {title:{text:'Bias in data/training is a major concern',font},yaxis:{range:[0,100]},margin:{t:40,b:40,l:40,r:10},font,paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)'},{displayModeBar:false,responsive:true});
+Plotly.newPlot('biasReveal',[{type:'pie',labels:['Yes','Unsure'],values:[50,50],hole:.5,marker:{colors:['#dd6b20','#e2e8f0']}}],
+ {title:{text:'Seniors: can explainable ML reveal bias?',font},margin:{t:40,b:10,l:10,r:10},font,paper_bgcolor:'rgba(0,0,0,0)'},{displayModeBar:false,responsive:true});
+Plotly.newPlot('deployChart',[{type:'bar',orientation:'h',
+  y:['Would use ROI-agnostic model<br>(whole image, radiologist-level)','Integration into existing<br>software is necessary','Model similar to (not better than)<br>radiologists can be integrated','Prospective validation crucial','External (multi-site) validation crucial'],
+  x:[64,65,70,74,78],marker:{color:'#2f855a'},text:['64%','65%','~70%','74%','78%'],textposition:'auto'}],
+ {title:{text:'Deployment & validation views (% of participants)',font},xaxis:{range:[0,100]},margin:{l:240,r:20,t:40,b:30},font,paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)'},{displayModeBar:false,responsive:true});
+
+// ---------- Quiz ----------
+const msgs={a:"Only 3 participants chose not to trust the model at all, so you’d be in a small minority.",b:"That’s the most common reaction: 16 residents and 10 seniors would analyse the model’s explanations.",c:"Many senior radiologists said they would consult colleagues or the literature, more so than residents.",d:"The paper reports that most participants would seek more information before making a final decision, rather than simply switching."};
+document.querySelectorAll('.quiz-opt').forEach(b=>b.onclick=()=>{document.querySelectorAll('.quiz-opt').forEach(x=>x.classList.remove('picked'));b.classList.add('picked');document.getElementById('quizMsg').innerHTML='<b>Your pick:</b> '+msgs[b.dataset.q];document.getElementById('quizReveal').style.display='block';});
+
+// ---------- Pipeline ----------
+const stages=[
+ {t:"Problem framing & data preprocessing",d:`<ul>
+ <li>Define the clinical problem precisely, in close consultation with radiologists, early on.</li>
+ <li>Reassure radiologists that the model is a <b>helping hand</b> and that they stay at the core of decision-making.</li>
+ <li>Use training data that is as <b>diverse</b> as possible, covering different patient subgroups and multiple modalities. Such models are more likely to give clinically valid explanations.</li>
+ <li>Use exploratory data analysis (data distributions, feature correlations) to make the data transparent.</li>
+ <li>Show preprocessing clearly, e.g. images before and after preprocessing.</li></ul>`},
+ {t:"Model training",d:`<ul>
+ <li>Explain the rationale for training configurations and hyperparameters, e.g. via <b>ablation studies</b> (remove a component and report the change in performance) and simple visualizations of training.</li>
+ <li>Integrate domain knowledge such as radiology reports, so the model focuses on clinically relevant areas.</li>
+ <li><b>Multimodal foundation models</b> trained on images plus reports may encode relevant semantics, generalize across tasks, and produce multiple explanation forms (heatmaps and text).</li>
+ <li>Prefer self-explainable methods (e.g. trainable attention) over post-hoc ones like Grad-CAM, which the authors call not highly reliable, while noting attention’s faithfulness still needs study.</li>
+ <li>Provide <b>SRTCS scores</b> alongside heatmaps: either generate them in textual explanations within reports (identify semantic features, then the corresponding assessment), or add SRTCS as an extra training modality with its own encoding module.</li></ul>`},
+ {t:"Explainability evaluation",d:`<p>Assess explanations on four metrics (see the interactive demos in the next section):</p><ol>
+ <li><b>Alignment with clinical evidence</b>: overlap with radiologist information such as manual segmentation masks.</li>
+ <li><b>Fidelity</b>: perturbing highlighted features should significantly affect the model’s output.</li>
+ <li><b>Robustness</b>: explanations stay consistent across variations such as scanner shifts, tested e.g. with adversarial noise.</li>
+ <li><b>Effect on radiologist performance</b>: does the explanation actually help users in the clinical task?</li></ol>`},
+ {t:"Refinement",d:`<ul>
+ <li>Treat explainability as <b>iterative</b>: adjust explanation tools until they meet the criteria above.</li>
+ <li>Example adjustments: maximize overlap between attention maps and manual segmentation, or increase explanation consistency under different noise functions. These can be built in as additional terms in the training objective / loss function.</li>
+ <li>Build <b>interactive feedback loops</b> so radiologists can review and revise predictions and comment on explanations, feeding back into the model over time.</li></ul>`}
+];
+const pl=document.getElementById('pipeline'), sdt=document.getElementById('stageDetail');
+stages.forEach((s,i)=>{const el=document.createElement('div');el.className='stage';el.innerHTML='<b>'+(i+1)+'</b>'+s.t;
+ el.onclick=()=>{document.querySelectorAll('.stage').forEach(x=>x.classList.remove('active'));el.classList.add('active');sdt.innerHTML='<h3 style="margin-top:0">Stage '+(i+1)+': '+s.t+'</h3>'+s.d;};
+ pl.appendChild(el); if(i===0) setTimeout(()=>el.click(),0);});
+
+// ---------- Alignment demo ----------
+const ac=document.getElementById('alignCanvas'), ax=ac.getContext('2d');
+function fakeScan(ctx,w,h){
+  ctx.fillStyle='#111';ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='#555';ctx.beginPath();ctx.ellipse(w/2,h/2,w*0.42,h*0.42,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#777';ctx.beginPath();ctx.ellipse(w/2,h/2,w*0.36,h*0.36,0,0,Math.PI*2);ctx.fill();
+}
+const mask={x:190,y:120,r:38};
+function drawAlign(){
+  const off=+document.getElementById('alignSlider').value;
+  fakeScan(ax,320,240);
+  ax.fillStyle='#999';ax.beginPath();ax.arc(mask.x,mask.y,mask.r-6,0,Math.PI*2);ax.fill();
+  const hx=60+off, hy=120, hr=38;
+  const g=ax.createRadialGradient(hx,hy,0,hx,hy,hr);
+  g.addColorStop(0,'rgba(255,40,0,0.85)');g.addColorStop(1,'rgba(255,200,0,0.15)');
+  ax.fillStyle=g;ax.beginPath();ax.arc(hx,hy,hr,0,Math.PI*2);ax.fill();
+  ax.strokeStyle='#48bb78';ax.lineWidth=3;ax.beginPath();ax.arc(mask.x,mask.y,mask.r,0,Math.PI*2);ax.stroke();
+  // overlap (IoU) via sampling
+  let inter=0,uni=0;
+  for(let x=0;x<320;x+=2)for(let y=0;y<240;y+=2){
+    const a=(x-hx)**2+(y-hy)**2<hr*hr, b=(x-mask.x)**2+(y-mask.y)**2<mask.r*mask.r;
+    if(a&&b)inter++; if(a||b)uni++;}
+  const iou=uni?inter/uni:0;
+  document.getElementById('alignOut').innerHTML='Overlap (intersection over union): <b>'+(iou*100).toFixed(0)+'%</b>. '+(iou>0.6?'The explanation aligns well with the radiologist’s mask.':iou>0.2?'Partial alignment.':'The model is “looking” somewhere clinically irrelevant.');
+}
+document.getElementById('alignSlider').oninput=drawAlign; drawAlign();
+
+// ---------- Fidelity demo ----------
+const fc=document.getElementById('fidCanvas'), fx=fc.getContext('2d');
+let fidSel='A', masked=false;
+const regions={A:{x:90,y:85},B:{x:205,y:150}}; // model truly relies on B
+function drawFid(){
+  fakeScan(fx,320,240);
+  fx.fillStyle='#aaa';fx.beginPath();fx.arc(205,150,22,0,Math.PI*2);fx.fill();
+  fx.fillStyle='#8a8a8a';fx.beginPath();fx.arc(90,85,18,0,Math.PI*2);fx.fill();
+  const r=regions[fidSel];
+  if(masked){fx.fillStyle='#000';fx.fillRect(r.x-35,r.y-35,70,70);}
+  else{const g=fx.createRadialGradient(r.x,r.y,0,r.x,r.y,40);g.addColorStop(0,'rgba(255,40,0,0.85)');g.addColorStop(1,'rgba(255,200,0,0.1)');fx.fillStyle=g;fx.beginPath();fx.arc(r.x,r.y,40,0,Math.PI*2);fx.fill();}
+  const base=0.91;
+  let p=base;
+  if(masked) p = fidSel==='B'?0.18:0.89;
+  let txt='Toy model’s predicted probability of abnormality: <b>'+(p*100).toFixed(0)+'%</b>';
+  if(masked) txt+= fidSel==='B'?' (big drop). Explanation B has <b>high fidelity</b>: it pointed at what the model really used.':' (barely changed). Explanation A has <b>low fidelity</b>: it highlighted a region the model doesn’t rely on.';
+  else txt+='. Click “Hide highlighted area” to test this explanation.';
+  document.getElementById('fidOut').innerHTML=txt;
+}
+const fA=document.getElementById('fidA'),fB=document.getElementById('fidB'),fM=document.getElementById('fidMask');
+fA.onclick=()=>{fidSel='A';masked=false;fA.classList.add('active');fB.classList.remove('active');fM.classList.remove('active');fM.textContent='Hide highlighted area';drawFid();};
+fB.onclick=()=>{fidSel='B';masked=false;fB.classList.add('active');fA.classList.remove('active');fM.classList.remove('active');fM.textContent='Hide highlighted area';drawFid();};
+fM.onclick=()=>{masked=!masked;fM.classList.toggle('active',masked);fM.textContent=masked?'Restore image':'Hide highlighted area';drawFid();};
+drawFid();
+</script>
+</body>
+</html>
