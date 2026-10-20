@@ -1,0 +1,9 @@
+docling
+sympy
+plotly
+playwright
+anthropic
+claude-agent-sdk
+python-dotenv
+openai
+pypdf

@@ -1,0 +1,9 @@
+.env
+.cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+traces/live_*.jsonl
+.paperviewer/
+.venv/
+outputs/
