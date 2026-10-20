@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teaching an MRI Model to Read Radiology Reports: Tumor Location-weighted MRI-Report Contrastive Learning</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+:root{
+  --bg:#f7f6f2; --ink:#1d2330; --muted:#5b6475; --card:#ffffff;
+  --accent:#2f6fdb; --accent2:#d9534f; --green:#2a9d6f; --gold:#e0a526;
+  --supra:#2f6fdb; --infra:#e07b26; --trans:#8e44ad; --line:#e3e1da;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Times New Roman",serif;background:var(--bg);color:var(--ink);line-height:1.65;font-size:18px}
+h1,h2,h3,h4,.sans{font-family:"Helvetica Neue",Arial,sans-serif}
+header{background:linear-gradient(135deg,#14213d,#2f4f8f);color:#fff;padding:64px 20px 48px}
+header .wrap{max-width:960px;margin:0 auto}
+header h1{font-size:2.1rem;line-height:1.25;margin:0 0 14px}
+header p.sub{font-size:1.1rem;opacity:.9;margin:0 0 18px}
+header .authors{font-size:.9rem;opacity:.75;font-family:Arial,sans-serif}
+nav{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line);font-family:Arial,sans-serif;font-size:.85rem;overflow-x:auto;white-space:nowrap}
+nav a{display:inline-block;padding:12px 14px;color:var(--muted);text-decoration:none}
+nav a:hover{color:var(--accent)}
+main{max-width:960px;margin:0 auto;padding:20px}
+section{margin:56px 0}
+h2{font-size:1.6rem;border-bottom:3px solid var(--accent);display:inline-block;padding-bottom:4px;margin-bottom:10px}
+h3{font-size:1.2rem;margin-top:30px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;margin:20px 0;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.callout{border-left:5px solid var(--accent);background:#eef3fc;padding:14px 18px;border-radius:6px;margin:18px 0}
+.callout.warn{border-color:var(--gold);background:#fdf6e6}
+.callout.red{border-color:var(--accent2);background:#fcefee}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;text-align:center}
+.stat .n{font-family:Arial,sans-serif;font-size:2rem;font-weight:bold;color:var(--accent)}
+.stat .l{font-size:.9rem;color:var(--muted)}
+.eq{font-family:"Cambria Math","Times New Roman",serif;background:#fbfaf7;border:1px dashed #c9c5b8;padding:14px;border-radius:8px;overflow-x:auto;font-size:1.05rem;text-align:center}
+.controls{display:flex;flex-wrap:wrap;gap:18px;align-items:center;font-family:Arial,sans-serif;font-size:.9rem;margin:12px 0}
+.controls label{display:flex;flex-direction:column;gap:4px;min-width:180px}
+input[type=range]{width:100%}
+button,.btn{font-family:Arial,sans-serif;font-size:.88rem;background:#fff;border:1.5px solid var(--accent);color:var(--accent);padding:7px 14px;border-radius:20px;cursor:pointer}
+button.on,button:hover{background:var(--accent);color:#fff}
+.mono{font-family:Menlo,Consolas,monospace;font-size:.9rem}
+table{border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:.88rem;margin:10px 0}
+th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left}
+th{background:#f1efe9}
+td.best{font-weight:bold;color:var(--green)}
+.pipe{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.node{font-family:Arial,sans-serif;font-size:.88rem;border:2px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;transition:.15s}
+.node:hover{border-color:var(--accent)}
+.node.sel{border-color:var(--accent);background:#eef3fc}
+.node.img{border-left:6px solid var(--supra)}
+.node.txt{border-left:6px solid var(--infra)}
+.node.loss{border-left:6px solid var(--accent2);grid-column:1 / span 2}
+.node.down{border-left:6px solid var(--green);grid-column:1 / span 2}
+.colhead{font-family:Arial,sans-serif;font-weight:bold;text-align:center;color:var(--muted);font-size:.85rem}
+#nodeInfo{min-height:110px}
+canvas{max-width:100%;border-radius:8px;background:#fff;border:1px solid var(--line)}
+.legend{font-family:Arial,sans-serif;font-size:.82rem;display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.sq{display:inline-block;width:11px;height:11px;margin-right:4px;vertical-align:middle}
+.readout{font-family:Arial,sans-serif;background:#14213d;color:#fff;border-radius:8px;padding:12px 16px;font-size:.95rem}
+.readout b{color:#ffd166}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+details{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:10px 0}
+summary{cursor:pointer;font-family:Arial,sans-serif;font-weight:bold}
+footer{text-align:center;font-family:Arial,sans-serif;font-size:.8rem;color:var(--muted);padding:40px 20px}
+.small{font-size:.85rem;color:var(--muted)}
+@media(max-width:640px){header h1{font-size:1.5rem}.pipe{grid-template-columns:1fr}.node.loss,.node.down{grid-column:auto}}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+<h1>Teaching a Brain-Scan AI to "Read" Radiology Reports So It Looks in the Right Place</h1>
+<p class="sub">An interactive explainer of <em>"Tumor Location-weighted MRI-Report Contrastive Learning: A Framework for Improving the Explainability of Pediatric Brain Tumor Diagnosis"</em></p>
+<div class="authors">Sara Ketabi, Matthias W. Wagner, Cynthia Hawkins, Uri Tabori, Birgit Betina Ertl-Wagner, Farzad Khalvati — The Hospital for Sick Children (SickKids) &amp; University of Toronto · arXiv:2411.00609 (Nov 2024)</div>
+</div></header>
+
+<nav>
+<a href="#problem">Problem</a><a href="#idea">Key idea</a><a href="#data">Data</a><a href="#arch">Architecture</a><a href="#global">Global loss</a><a href="#sampling">Negative sampling</a><a href="#local">Local loss</a><a href="#down">Downstream task</a><a href="#results">Results</a><a href="#explain">Explainability</a><a href="#ablation">Ablations</a><a href="#limits">Limitations</a>
+</nav>
+
+<main>
+
+<section id="tldr">
+<div class="callout">
+<strong>In one paragraph:</strong> AI models can predict facts about brain tumors from MRI scans, but doctors rarely trust them because it's unclear <em>what part of the image</em> the model is using. The authors pre-train a 3D image model alongside the radiology reports doctors already write, teaching it to place each scan "near" its own report in a shared mathematical space — and they add a twist that uses <strong>where in the brain the tumor sits</strong>. When this pre-trained model is then fine-tuned to identify a genetic marker of a common childhood brain tumor, its attention overlaps far more with the actual tumor and its accuracy improves, including on an independent dataset from different years and scanners.
+</div>
+<div class="grid3">
+  <div class="stat"><div class="n">0.877</div><div class="l">AUC on internal test data<br>(vs 0.790 and 0.748 for baselines)</div></div>
+  <div class="stat"><div class="n">0.757</div><div class="l">AUC on the external dataset<br>(baselines: 0.418 and 0.467)</div></div>
+  <div class="stat"><div class="n">31.1%</div><div class="l">2D Dice overlap between model attention and tumor (internal)<br>(baselines: 22.5% and 6.1%)</div></div>
+</div>
+</section>
+
+<section id="problem">
+<h2>1. The problem: accurate, but not trusted</h2>
+<p>Convolutional neural networks (CNNs) have performed well at diagnosing brain tumors from MRI scans, non-invasively. Yet they are rarely adopted in clinics. A major reason the paper highlights is <strong>lack of explainability</strong>: it is unclear which features drive a prediction, so radiologists can't verify that the model is reasoning about the right things.</p>
+<p>The paper defines explainability concretely: the ability of a model to <em>focus on the relevant parts of the input</em> when making a prediction. For a brain tumor, that means looking at the tumor rather than at some unrelated region.</p>
+
+<h3>The clinical task: pediatric Low-grade Glioma (pLGG)</h3>
+<p>pLGG is one of the most common brain tumors in children (prevalence rate of 30–40%). Knowing its <strong>genetic marker</strong> matters for prognosis, risk stratification, and targeted treatment. This paper focuses on distinguishing the two most important markers:</p>
+<ul>
+<li><strong>BRAF Fusion</strong></li>
+<li><strong>BRAF V600E Mutation</strong></li>
+</ul>
+<p>Today this is mainly determined by <strong>biopsy</strong>, which is invasive and can be difficult when the tumor is hard to reach. A trustworthy MRI-based predictor could serve as a non-invasive tool.</p>
+
+<h3>Why not just give the model expert hints?</h3>
+<p>Earlier work improved explainability using expert knowledge such as radiologist-annotated <em>semantic features</em> or <em>eye-gaze tracking</em> of where radiologists look. But these are expensive and labor-intensive to collect. <strong>Radiology reports</strong>, by contrast, already exist for most scans — they are radiologists' expertise written down in their own language.</p>
+</section>
+
+<section id="idea">
+<h2>2. The key idea: learn from scan–report pairs</h2>
+<p>The method uses <strong>contrastive learning (CL)</strong>, a form of self-supervised learning. No diagnosis labels are needed — only the knowledge of which report belongs to which scan. The model learns to turn each MRI and each report into a vector (an "embedding") such that:</p>
+<ul>
+<li>a scan and <em>its own</em> report end up <strong>close together</strong>, and</li>
+<li>a scan and <em>someone else's</em> report end up <strong>far apart</strong>.</li>
+</ul>
+<p>To succeed, the image model must pick up on the things that reports talk about — which, for a tumor report, is largely the tumor. The authors then reuse this image model for the genetic-marker task.</p>
+
+<div class="card">
+<h4 style="margin-top:0">What's new here, according to the authors</h4>
+<ol>
+<li><strong>Global <em>and</em> local alignment for 3D MRI.</strong> Prior image–report CL work was mostly on 2D chest X-rays; for 3D brain MRI, earlier work aligned only whole-scan and whole-report representations. This paper also aligns fine-grained <em>image patches</em> with <em>report words</em>.</li>
+<li><strong>Tumor location as an extra signal.</strong> Each case has a tumor location (Supratentorial, Infratentorial, or Transtentorial). The loss treats mismatched pairs differently depending on whether they share a location.</li>
+<li><strong>"Semi-hard" negative sampling,</strong> a cheap way to choose informative mismatched examples.</li>
+<li>Using the learned representations to improve <strong>explainability</strong> of a downstream diagnosis model, measured against manual tumor segmentations.</li>
+</ol>
+</div>
+</section>
+
+<section id="data">
+<h2>3. The data</h2>
+<p>Both datasets come from SickKids (Toronto). The study was retrospective and approved by the research ethics board, which waived informed consent.</p>
+<table>
+<tr><th></th><th>Dataset 1 (development)</th><th>Dataset 2 (independent test)</th></tr>
+<tr><td>Years</td><td>2000–2018</td><td>2018–2023</td></tr>
+<tr><td>Patients</td><td>341 (ages 0–17, pLGG), 3D FLAIR MRI</td><td>76 used for evaluation</td></tr>
+<tr><td>Reports</td><td>Yes — used for CL pretraining</td><td>No reports</td></tr>
+<tr><td>Labels (BRAF Fusion / V600E Mutation / Other)</td><td>137 / 67 / 137</td><td>48 / 28 / 54</td></tr>
+<tr><td>Used for classification</td><td>204 (Fusion + Mutation only)</td><td>76 (Fusion + Mutation)</td></tr>
+<tr><td>Why it matters</td><td>Pretraining (all 341 pairs) + fine-tuning with cross-validation</td><td>Different scanner manufacturers and time range → tests robustness to "data shift"</td></tr>
+</table>
+<div class="callout warn">
+<strong>Guarding against cheating:</strong> Reports were cleaned of dates, numbers, punctuation, and any words or phrases containing the genetic marker labels, to avoid leaking the answer. Manual tumor segmentation masks were <em>never</em> used in training — only afterwards, to grade where the model was looking. Images and masks were resized to 240×240×155.
+</div>
+<div id="labelChart" style="height:300px"></div>
+</section>
+
+<section id="arch">
+<h2>4. The architecture — click any block</h2>
+<p>Two "encoders" read the two modalities, and several loss terms tie them together. Click a block to see what it does.</p>
+<div class="card">
+<div class="pipe">
+  <div class="colhead">🧠 MRI side</div><div class="colhead">📝 Report side</div>
+  <div class="node img" data-k="mri">3D FLAIR MRI scan</div>
+  <div class="node txt" data-k="rep">Radiology report (cleaned)</div>
+  <div class="node img" data-k="resnet">3D ResNet encoder (MedicalNet init)</div>
+  <div class="node txt" data-k="longf">Clinical Longformer encoder</div>
+  <div class="node img" data-k="selfatt">Self-attention layer → global image embedding (512)</div>
+  <div class="node txt" data-k="cls">CLS token → global text embedding (768)</div>
+  <div class="node img" data-k="mlp">MLP projection head → 512</div>
+  <div class="node txt" data-k="mlp">MLP projection head → 512</div>
+  <div class="node img" data-k="locimg">Local image features (3rd conv module)</div>
+  <div class="node txt" data-k="loctxt">Local word features (all non-CLS tokens)</div>
+  <div class="node loss" data-k="cross">Cross-attention: image patches ⇄ report words</div>
+  <div class="node loss" data-k="glob">Global loss (location-weighted triplet loss)</div>
+  <div class="node loss" data-k="loc">Local loss (triplet loss on weighted local features)</div>
+  <div class="node loss" data-k="total">Total loss = α · Global + β · Local</div>
+  <div class="node down" data-k="down">⬇ Downstream: reuse only the trained ResNet + a fully-connected layer → BRAF Fusion vs. V600E Mutation</div>
+</div>
+<div id="nodeInfo" class="callout" style="margin-top:16px">Click a block above.</div>
+</div>
+</section>
+
+<section id="global">
+<h2>5. The global loss, explained (with a calculator)</h2>
+<p>The global loss uses a <strong>triplet loss</strong>. For every item in a batch, take it as an <em>anchor</em> (say, an MRI), then pick its <em>positive</em> (its own report) and a <em>negative</em> (a report from another patient). The loss wants the positive to be closer than the negative by at least a margin <em>m</em>. It is done twice: once with MRIs as anchors, once with reports as anchors.</p>
+<p>"Distance" here is <strong>cosine distance</strong> = 1 − cosine similarity: 0 when two vectors point the same way, up to 2 when they point in opposite directions.</p>
+
+<div class="eq">
+Global Loss = Σ<sub>i=1..2</sub> Σ<sub>j=1..n</sub> max( 0,&nbsp; d(a,p) − (1−l<sub>j</sub>)·d(a,n) − c·l<sub>j</sub>·d(a,n) + m )
+<br><span class="small">where d(x,y) = 1 − cos(x,y)</span>
+</div>
+<ul>
+<li><strong>d(a,p)</strong>: distance from anchor to its true partner — should be small.</li>
+<li><strong>d(a,n)</strong>: distance from anchor to the mismatched partner — should be large.</li>
+<li><strong>l<sub>j</sub></strong>: 1 if the anchor and negative share the same tumor location, 0 otherwise.</li>
+<li><strong>c</strong>: a coefficient between 0 and 1 applied only when locations match. Tuned to <strong>0.5</strong>.</li>
+<li><strong>m</strong>: margin, set to <strong>0.25</strong>.</li>
+<li><strong>max(0, …)</strong>: once the positive is "close enough" relative to the negative, the loss is zero and nothing more is pushed.</li>
+</ul>
+<p>The <strong>intuition the authors give</strong>: a scan and an unrelated report that describe tumors in the <em>same</em> brain region shouldn't be treated as completely unrelated — their distance should be smaller than that of a mismatched pair with <em>different</em> tumor locations. The coefficient <em>c</em> scales the negative-distance term for same-location pairs.</p>
+
+<div class="card">
+<h4 style="margin-top:0">Try it: one triplet term</h4>
+<div class="controls">
+<label>Anchor ↔ positive distance d(a,p): <span id="vdp" class="mono"></span><input type="range" id="dp" min="0" max="2" step="0.01" value="0.3"></label>
+<label>Anchor ↔ negative distance d(a,n): <span id="vdn" class="mono"></span><input type="range" id="dn" min="0" max="2" step="0.01" value="0.4"></label>
+<label>Coefficient c: <span id="vc" class="mono"></span><input type="range" id="cc" min="0.01" max="0.99" step="0.01" value="0.5"></label>
+<label>Margin m: <span id="vm" class="mono"></span><input type="range" id="mm" min="0" max="1" step="0.01" value="0.25"></label>
+</div>
+<div class="controls">
+<span>Do the anchor and negative share a tumor location?</span>
+<button id="lDiff" class="on">No (l = 0)</button><button id="lSame">Yes (l = 1)</button>
+</div>
+<div class="readout" id="lossOut"></div>
+<div id="lossPlot" style="height:300px;margin-top:12px"></div>
+<p class="small">The chart shows how this one term changes as the negative distance varies (other values held fixed), for both l = 0 and l = 1. Paper defaults: c = 0.5, m = 0.25.</p>
+</div>
+
+<details><summary>Reading the formula literally</summary>
+<p>When l = 1, the negative distance is multiplied by c (e.g. 0.5), so it "counts" less. You can see in the calculator that the loss only hits zero when c·d(a,n) exceeds d(a,p) + m. This is exactly what the paper's Equation 1 computes; the page reports the authors' stated motivation above, and the calculator lets you see the arithmetic for yourself.</p>
+</details>
+
+<p><strong>Why triplet loss and not the usual contrastive loss?</strong> The authors tried both and found triplet loss gave better downstream AUC. They hypothesize that with a small dataset (and small batches), using <em>all</em> negatives in the batch, as standard contrastive loss does, leads to overfitting, whereas one carefully chosen negative per anchor generalizes better.</p>
+</section>
+
+<section id="sampling">
+<h2>6. Choosing the negative: random, semi-hard, or hard</h2>
+<p>Which mismatched example should be the "negative"? Batches have 16 pairs, so each anchor has 15 possible negatives.</p>
+<ul>
+<li><strong>Random:</strong> pick any one. Cheap, but may be too easy to teach much.</li>
+<li><strong>Hard:</strong> compute distance to all 15, pick the closest (most confusing). Effective in general, but costs 15 distance computations per anchor.</li>
+<li><strong>Semi-hard (proposed):</strong> pick <strong>2</strong> at random, keep the closer one. Only 2 distance computations per anchor.</li>
+</ul>
+<div class="card">
+<h4 style="margin-top:0">Simulated batch of 16 scan–report pairs (a 2D cartoon of the embedding space)</h4>
+<div class="controls">
+<button data-s="random">Random (1)</button>
+<button data-s="semi" class="on">Semi-hard (2)</button>
+<button data-s="semi8">Sample 8</button>
+<button data-s="hard">Hard (15)</button>
+<button id="resample">🎲 Resample</button>
+<button id="newBatch">New batch</button>
+</div>
+<canvas id="emb" width="900" height="440"></canvas>
+<div class="legend">
+<span><span class="dot" style="background:var(--supra)"></span>Supratentorial</span>
+<span><span class="dot" style="background:var(--infra)"></span>Infratentorial</span>
+<span><span class="dot" style="background:var(--trans)"></span>Transtentorial</span>
+<span>● = MRI embedding &nbsp; ■ = report embedding</span>
+<span><span class="sq" style="background:var(--green)"></span>anchor→positive</span>
+<span><span class="sq" style="background:#aaa"></span>candidates checked</span>
+<span><span class="sq" style="background:var(--accent2)"></span>chosen negative</span>
+</div>
+<div class="readout" id="sampOut" style="margin-top:10px"></div>
+<p class="small">Click any MRI dot (●) to make it the anchor. This is an illustration of the sampling rule only — positions are synthetic, and plain 2D distance stands in for cosine distance.</p>
+</div>
+<div class="callout">
+<strong>What the paper found:</strong> Sampling 2 worked best downstream. With 8 or 15, the authors observed that in many batches the model kept choosing the <em>same</em> representation as the hardest negative for most anchors — which they attribute to small batches lacking diversity and to outliers. Notice in the demo how "Hard" tends to always grab the same nearby point. Full hard negative sampling gave the worst ablation AUC (0.450).
+</div>
+</section>
+
+<section id="local">
+<h2>7. The local loss: matching image patches to words</h2>
+<p>A report sentence like a description of a lesion refers to a specific region of the scan. The local loss tries to make fine-grained image features and the words that describe them line up.</p>
+<ol>
+<li><strong>Local image features</strong> come from the ResNet's 3rd convolutional module (finer-grained than the last one).</li>
+<li><strong>Local text features</strong> are the Longformer's output for all tokens except CLS. Since a word can be split into several tokens, their attention scores are summed back into a single word.</li>
+<li><strong>Cross-attention</strong> (two modules): in one, image features ask questions ("query") of the words ("key/value"); in the other, words query the image. Each produces a <em>weighted</em> version of its query — e.g. "the image patches, re-expressed according to the report."</li>
+<li>A triplet loss then pulls each original local representation toward its own weighted counterpart, and away from a mismatched one.</li>
+</ol>
+<div class="eq">
+Local Loss = Σ<sub>k=1..2</sub> Σ<sub>i=1..2</sub> Σ<sub>j=1..n</sub> max( 0,&nbsp; d(a,p) − d(a,n) + m )
+</div>
+<p class="small">k: image side or text side. i: whether the anchor is the original or the weighted local representation. Same triplet logic as before, without the location term.</p>
+
+<h3>Total loss</h3>
+<div class="eq">Total CL Loss = α × Global Loss + β × Local Loss</div>
+<p>α and β are <strong>trainable</strong> — the model learns how much to weigh each part. Training used AdamW (learning rate 0.0001), batch size 16, on a Tesla V100 GPU. (The main text states 400 epochs; the hyperparameter table in the appendix lists 340 as the optimal value among 230/340/500.)</p>
+<details><summary>Keeping a small dataset from overfitting</summary>
+<p>With only 341 pairs — far fewer than the thousands or millions used in other CL work — the authors:</p>
+<ul>
+<li>started the image encoder from <strong>MedicalNet (Med3D)</strong> weights, pretrained on 3D medical images, and the text encoder from <strong>Clinical Longformer</strong> weights (trained on MIMIC-III);</li>
+<li><strong>froze</strong> the first two ResNet modules and the first ten Longformer layers, fine-tuning only the last two of each (they tried fine-tuning one or two layers; two was best);</li>
+<li>used dropout (optimal rate 0.25).</li>
+</ul>
+<p>Trainable parameters: about 52.1 million in pretraining (31.8M image encoder, 18.9M text encoder, 0.79M cross-attention, 0.53M MLP heads), and about 31.9M in the downstream classifier.</p>
+</details>
+</section>
+
+<section id="down">
+<h2>8. The downstream task: predicting the genetic marker</h2>
+<p>After pretraining, the report encoder is thrown away. Only the trained <strong>3D ResNet</strong> is kept, with a fully-connected layer added on top to classify <strong>BRAF Fusion vs. BRAF V600E Mutation</strong>. <em>No report is needed at prediction time.</em></p>
+<p>Training: cross-entropy loss, AdamW (initial learning rate 0.0001), batch size 16, 20 epochs, with a StepLR scheduler halving the learning rate every 10 epochs. Again, the first two convolutional modules are frozen.</p>
+<p>Three ways to start the same ResNet are compared:</p>
+<div class="grid3">
+<div class="stat"><div class="n" style="font-size:1.3rem;color:#888">Random</div><div class="l">Trained from scratch</div></div>
+<div class="stat"><div class="n" style="font-size:1.3rem;color:var(--gold)">MedicalNet</div><div class="l">Generic 3D medical pretraining, then fine-tuned</div></div>
+<div class="stat"><div class="n" style="font-size:1.3rem;color:var(--accent)">Proposed CL</div><div class="l">MRI–report contrastive pretraining, then fine-tuned</div></div>
+</div>
+<p>Evaluation used 5-fold cross-validation on Dataset 1 (internal) and testing each of the five models on Dataset 2 (external). Results are mean (± std).</p>
+</section>
+
+<section id="results">
+<h2>9. Classification results</h2>
+<details><summary>What do AUC, precision, recall and F1 mean?</summary>
+<p>The "positive" class here is BRAF V600E Mutation.</p>
+<ul>
+<li><strong>AUC</strong> (the main metric): summarizes the trade-off between true-positive and false-positive rates across all thresholds. 0.5 ≈ coin flip, 1.0 = perfect.</li>
+<li><strong>Precision</strong> = TP / (TP + FP): of the cases called "Mutation", how many really were.</li>
+<li><strong>Recall</strong> = TP / (TP + FN): of the real Mutation cases, how many were caught.</li>
+<li><strong>F1</strong> = 2 × Precision × Recall / (Precision + Recall): a balance of the two.</li>
+</ul>
+</details>
+<div class="tabs">
+<button class="on" data-ds="1">Dataset 1 (internal test)</button>
+<button data-ds="2">Dataset 2 (external)</button>
+</div>
+<div id="clsChart" style="height:400px"></div>
+<div id="clsNote" class="callout"></div>
+</section>
+
+<section id="explain">
+<h2>10. Is the model looking at the tumor?</h2>
+<p>To measure explainability, the authors take the model's <strong>attention heatmap</strong> from the self-attention module, normalize it to [0,1], binarize it at a threshold of <strong>0.01</strong> (chosen by visual inspection), and compare it to the radiologists' <strong>manual tumor segmentation</strong> using the <strong>Dice score</strong>:</p>
+<div class="eq">Dice = 2 × |Attention ∩ Tumor| / ( |Attention| + |Tumor| )</div>
+<p>Dice is 0 with no overlap and 100% with a perfect match. "3D Dice" uses the whole volume; "2D Dice" uses the single slice with the largest tumor cross-section.</p>
+
+<div class="card">
+<h4 style="margin-top:0">Play with Dice: move a toy attention blob over a toy tumor</h4>
+<div class="controls">
+<label>Blob horizontal position<input type="range" id="bx" min="0" max="1" step="0.01" value="0.3"></label>
+<label>Blob vertical position<input type="range" id="by" min="0" max="1" step="0.01" value="0.35"></label>
+<label>Blob spread<input type="range" id="bs" min="2" max="14" step="0.5" value="6"></label>
+<label>Binarization threshold: <span id="vth" class="mono"></span><input type="range" id="th" min="0.01" max="0.9" step="0.01" value="0.3"></label>
+</div>
+<canvas id="dice" width="420" height="420" style="width:100%;max-width:420px;display:block;margin:auto"></canvas>
+<div class="legend" style="justify-content:center"><span><span class="sq" style="background:#2a9d6f"></span>overlap</span><span><span class="sq" style="background:#e9b44c"></span>attention only</span><span><span class="sq" style="background:#5b8fe0"></span>tumor only</span></div>
+<div class="readout" id="diceOut" style="margin-top:10px;text-align:center"></div>
+<p class="small">Toy illustration only (synthetic 2D grid, not patient data). Notice how a low threshold makes the binarized attention region large — even a well-placed blob then gets a modest Dice. This helps put values like 31% in perspective.</p>
+</div>
+
+<div class="tabs">
+<button class="on" data-dd="1">Dataset 1 (internal)</button>
+<button data-dd="2">Dataset 2 (external)</button>
+</div>
+<div id="diceChart" style="height:380px"></div>
+<div class="callout">
+On the external Dataset 2, the baselines' Dice scores are tiny (≈4.5% 2D, ≈1.5–1.8% 3D) — the authors note these models rely on regions <em>outside</em> the tumor. The CL-initialized model reaches 30.7% (2D) and 16.0% (3D) with very low variability. The paper's Figure 3 shows an example slice where the CL model's heatmap overlaps the segmented tumor while the baselines' do not.
+</div>
+<p class="small">Note: Table 3 reports 31.1% 2D Dice on Dataset 1 (also used in the abstract and conclusion); one sentence in the results text says 33.1%. This page uses the table value.</p>
+
+<h3>Statistical significance (external Dataset 2, paired t-tests)</h3>
+<table>
+<tr><th>Comparison</th><th>AUC</th><th>F1</th><th>2D Dice</th><th>3D Dice</th></tr>
+<tr><td>Proposed vs. Random</td><td>p = 0.0036</td><td>p = 0.0000</td><td>p = 0.0001</td><td>p = 0.0001</td></tr>
+<tr><td>Proposed vs. MedicalNet</td><td>p = 0.0000</td><td>p = 0.0005</td><td>p = 0.0002</td><td>p = 0.0000</td></tr>
+</table>
+<p class="small">All below 0.05, which the authors interpret as statistically significant improvements.</p>
+</section>
+
+<section id="ablation">
+<h2>11. Ablations: which ingredients matter?</h2>
+<p>The authors removed or swapped components and measured downstream results on the external Dataset 2.</p>
+<div class="tabs">
+<button class="on" data-ab="auc">Mean AUC</button>
+<button data-ab="f1">Mean F1</button>
+</div>
+<div id="abChart" style="height:380px"></div>
+<ul>
+<li><strong>Both global and local losses are needed:</strong> either alone is much worse in AUC (0.608, 0.567).</li>
+<li><strong>Tumor location helps:</strong> dropping it reduces AUC from 0.757 to 0.683.</li>
+<li><strong>Triplet vs. contrastive loss:</strong> triplet wins on AUC (0.757 vs 0.692), but the contrastive-loss version has slightly higher F1 (0.559 vs 0.534).</li>
+<li><strong>Hard negative sampling hurt</strong> badly (AUC 0.450).</li>
+</ul>
+</section>
+
+<section id="limits">
+<h2>12. Limitations and what's next</h2>
+<div class="callout red">
+<ul style="margin:0">
+<li><strong>Small dataset.</strong> Only 341 image–report pairs for pretraining. The authors say this may limit generalizability, as reflected in the relatively low external results (e.g., external AUC 0.757 vs. 0.877 internal; external recall 0.524).</li>
+<li><strong>Single institution.</strong> Both datasets come from SickKids; an internal dataset was used because the authors found no open-source dataset with MRI, reports, and tumor location together, plus pediatric genetic-marker labels.</li>
+<li><strong>One downstream task, always with fine-tuning.</strong> Tasks needing no fine-tuning (zero- or few-shot classification) weren't explored.</li>
+<li><strong>Not uniformly better.</strong> Internally, the MedicalNet baseline had much higher recall (0.918 vs 0.638); in ablations, contrastive loss had a slightly higher F1.</li>
+<li><strong>Explainability is measured as overlap with the tumor.</strong> Dice values of ~31% (2D) and ~16% (3D) are big improvements over baselines but still far from complete overlap, and depend on a visually chosen binarization threshold (0.01).</li>
+</ul>
+</div>
+<p><strong>Future work</strong> proposed by the authors: data augmentation to enlarge the training set, and exploring zero-/few-shot tasks.</p>
+
+<h3>Why it matters</h3>
+<p>The authors argue that the framework (1) needs no human-provided labels for pretraining — just the reports that already exist — which can reduce how much annotated data downstream tasks need; (2) handled data shift from different years and scanners better than baselines; and (3) produced attention maps closer to where radiologists see the tumor, which could help build trust and support radiologists rather than replace them.</p>
+</section>
+
+</main>
+<footer>Explainer based solely on the content of arXiv:2411.00609v1 (Ketabi et al., 2024). Interactive toys (embedding cartoon, Dice grid, loss calculator) are illustrations of the paper's formulas and rules, not patient data.</footer>
+
+<script>
+// ---------- Architecture info ----------
+const info={
+ mri:"<b>Input MRI.</b> 3D FLAIR brain scans, preprocessed and resized to 240×240×155. 341 scans from 341 unique pLGG patients in Dataset 1 are used for pretraining.",
+ rep:"<b>Radiology report.</b> The radiologist's written findings. Dates, numbers, punctuation and any words containing the genetic marker labels are removed to prevent data leakage.",
+ resnet:"<b>3D ResNet.</b> Four 3D convolutional modules with batch-normalization, average-pooling and dropout after each (except the last). Initialized with <b>MedicalNet (Med3D)</b> weights. The first two modules are frozen (they capture generic low-level features); the last two are fine-tuned.",
+ longf:"<b>Clinical Longformer.</b> A transformer that accepts up to 4096 tokens — long enough for MRI reports. Initialized from Clinical Longformer (trained on MIMIC-III). The first ten layers are frozen; the last two are fine-tuned.",
+ selfatt:"<b>Self-attention on the last conv module.</b> Query, key and value come from three trainable 3D convolutions. Attention weights (query·key) reweight the value, which is added back residually. Output: the 512-channel global image embedding. These attention weights later provide the heatmaps used to measure explainability.",
+ cls:"<b>CLS token.</b> A special first token whose final-layer embedding (768 channels) summarizes the whole report — used as the global text representation.",
+ mlp:"<b>MLP projection head.</b> Linear → ReLU → Linear, bringing both global embeddings to the same 512-dimensional space so they can be compared.",
+ locimg:"<b>Local image features.</b> Output of the 3rd convolutional module, which captures finer-grained visual detail than the final module.",
+ loctxt:"<b>Local text features.</b> Final-layer embeddings of all tokens except CLS. Scores from sub-word tokens are summed back into whole words.",
+ cross:"<b>Cross-attention.</b> Two modules: image-as-query attends to words, and words-as-query attend to image features. Each yields attention scores and a <em>weighted</em> version of the query.",
+ glob:"<b>Global loss.</b> Triplet loss with cosine distance, using semi-hard negatives, in both directions (MRI anchors and report anchors), with the tumor-location coefficient c = 0.5 and margin m = 0.25. See section 5.",
+ loc:"<b>Local loss.</b> Triplet loss between each original local representation and its cross-attention-weighted counterpart (for image and text sides). See section 7.",
+ total:"<b>Total loss</b> = α·Global + β·Local, with α and β learned during training. Optimizer AdamW, learning rate 1e-4, batch size 16.",
+ down:"<b>Downstream classifier.</b> Only the pretrained 3D ResNet is reused (no reports needed). First two modules frozen, plus a fully-connected layer. Cross-entropy, AdamW (lr 1e-4), batch 16, 20 epochs, StepLR halving every 10 epochs."
+};
+document.querySelectorAll('.node').forEach(n=>n.addEventListener('click',()=>{
+ document.querySelectorAll('.node').forEach(x=>x.classList.remove('sel'));
+ document.querySelectorAll('.node[data-k="'+n.dataset.k+'"]').forEach(x=>x.classList.add('sel'));
+ document.getElementById('nodeInfo').innerHTML=info[n.dataset.k];
+}));
+
+// ---------- Label distribution ----------
+const plotCfg={displayModeBar:false,responsive:true};
+const font={family:'Helvetica Neue, Arial, sans-serif'};
+Plotly.newPlot('labelChart',[
+ {x:['Dataset 1','Dataset 2'],y:[137,48],name:'BRAF Fusion',type:'bar',marker:{color:'#2f6fdb'}},
+ {x:['Dataset 1','Dataset 2'],y:[67,28],name:'BRAF V600E Mutation',type:'bar',marker:{color:'#d9534f'}},
+ {x:['Dataset 1','Dataset 2'],y:[137,54],name:'Other (excluded from classification)',type:'bar',marker:{color:'#bbb'}}
+],{barmode:'group',title:{text:'Genetic marker distribution (Table 6)',font:{size:14}},font,margin:{t:40,b:40,l:40,r:10},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',legend:{orientation:'h',y:-0.15}},plotCfg);
+
+// ---------- Loss calculator ----------
+let lval=0;
+const $=id=>document.getElementById(id);
+function term(dp,dn,l,c,m){return Math.max(0,dp-(1-l)*dn-c*l*dn+m);}
+function updLoss(){
+ const dp=+$('dp').value,dn=+$('dn').value,c=+$('cc').value,m=+$('mm').value;
+ $('vdp').textContent=dp.toFixed(2);$('vdn').textContent=dn.toFixed(2);$('vc').textContent=c.toFixed(2);$('vm').textContent=m.toFixed(2);
+ const L=term(dp,dn,lval,c,m);
+ const w=lval?c:1;
+ $('lossOut').innerHTML=`Weight on negative distance = <b>${w.toFixed(2)}</b> ${lval?'(same location → multiplied by c)':'(different location → 1)'}<br>
+ Loss term = max(0, ${dp.toFixed(2)} − ${w.toFixed(2)}×${dn.toFixed(2)} + ${m.toFixed(2)}) = <b>${L.toFixed(3)}</b><br>
+ ${L===0?'✅ Zero loss: the positive is already sufficiently closer than the (weighted) negative — no push.':'⚠️ Non-zero: training will pull the positive closer and/or push the negative farther.'}`;
+ const xs=[],y0=[],y1=[];
+ for(let x=0;x<=2.0001;x+=0.02){xs.push(x);y0.push(term(dp,x,0,c,m));y1.push(term(dp,x,1,c,m));}
+ Plotly.react('lossPlot',[
+  {x:xs,y:y0,name:'different location (l=0)',line:{color:'#2f6fdb',width:3}},
+  {x:xs,y:y1,name:'same location (l=1)',line:{color:'#e07b26',width:3,dash:'dash'}},
+  {x:[dn],y:[L],mode:'markers',name:'current',marker:{size:13,color:'#d9534f'}}
+ ],{font,margin:{t:20,b:45,l:50,r:10},xaxis:{title:'anchor–negative distance d(a,n)'},yaxis:{title:'loss term'},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#fff',legend:{orientation:'h',y:-0.25}},plotCfg);
+}
+['dp','dn','cc','mm'].forEach(id=>$(id).addEventListener('input',updLoss));
+$('lDiff').onclick=()=>{lval=0;$('lDiff').classList.add('on');$('lSame').classList.remove('on');updLoss();};
+$('lSame').onclick=()=>{lval=1;$('lSame').classList.add('on');$('lDiff').classList.remove('on');updLoss();};
+updLoss();
+
+// ---------- Embedding / sampling demo ----------
+const cv=$('emb'),cx=cv.getContext('2d');
+const locCol=['#2f6fdb','#e07b26','#8e44ad'];
+let pts=[],anchor=0,strategy='semi',cand=[],chosen=-1;
+function rnd(a,b){return a+Math.random()*(b-a);}
+function newBatch(){
+ pts=[];
+ const centers=[[230,170],[640,150],[450,320]];
+ for(let i=0;i<16;i++){
+  const loc=i%3===0?2:(i%3===1?0:1);
+  const c=centers[loc];
+  const ix=c[0]+rnd(-150,150),iy=c[1]+rnd(-100,100);
+  pts.push({loc,img:[ix,iy],rep:[ix+rnd(-45,45),iy+rnd(-45,45)]});
+ }
+ anchor=0;sample();
+}
+function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+function sample(){
+ const others=[...Array(16).keys()].filter(i=>i!==anchor);
+ const k={random:1,semi:2,semi8:8,hard:15}[strategy];
+ const sh=others.sort(()=>Math.random()-0.5);
+ cand=sh.slice(0,k);
+ chosen=cand.reduce((b,i)=>dist(pts[anchor].img,pts[i].rep)<dist(pts[anchor].img,pts[b].rep)?i:b,cand[0]);
+ draw();
+}
+function draw(){
+ cx.clearRect(0,0,cv.width,cv.height);
+ const A=pts[anchor];
+ cand.forEach(i=>{cx.strokeStyle='#bbb';cx.setLineDash([5,5]);cx.lineWidth=1.5;cx.beginPath();cx.moveTo(...A.img);cx.lineTo(...pts[i].rep);cx.stroke();});
+ cx.setLineDash([]);
+ cx.strokeStyle='#2a9d6f';cx.lineWidth=4;cx.beginPath();cx.moveTo(...A.img);cx.lineTo(...A.rep);cx.stroke();
+ cx.strokeStyle='#d9534f';cx.lineWidth=4;cx.beginPath();cx.moveTo(...A.img);cx.lineTo(...pts[chosen].rep);cx.stroke();
+ pts.forEach((p,i)=>{
+  cx.fillStyle=locCol[p.loc];
+  cx.globalAlpha=0.9;
+  cx.beginPath();cx.arc(p.img[0],p.img[1],i===anchor?12:8,0,7);cx.fill();
+  if(i===anchor){cx.strokeStyle='#000';cx.lineWidth=3;cx.stroke();}
+  cx.fillRect(p.rep[0]-7,p.rep[1]-7,14,14);
+  if(i===chosen){cx.strokeStyle='#d9534f';cx.lineWidth=3;cx.strokeRect(p.rep[0]-10,p.rep[1]-10,20,20);}
+  cx.globalAlpha=1;
+ });
+ cx.fillStyle='#000';cx.font='bold 14px Arial';cx.fillText('anchor',A.img[0]+14,A.img[1]-12);
+ const same=pts[chosen].loc===A.loc;
+ const k=cand.length;
+ $('sampOut').innerHTML=`Strategy: <b>${{random:'Random',semi:'Semi-hard (proposed)',semi8:'Sample 8, keep closest',hard:'Hard negative'}[strategy]}</b> · distance computations for this anchor: <b>${k}</b> (×16 anchors per batch = ${k*16})<br>
+ Chosen negative's tumor location ${same?'<b>matches</b> the anchor → in the global loss, l = 1 and the coefficient c applies':'<b>differs</b> from the anchor → l = 0'}.`;
+}
+cv.addEventListener('click',e=>{
+ const r=cv.getBoundingClientRect(),sx=cv.width/r.width,sy=cv.height/r.height;
+ const x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy;
+ let best=-1,bd=25;
+ pts.forEach((p,i)=>{const d=Math.hypot(p.img[0]-x,p.img[1]-y);if(d<bd){bd=d;best=i;}});
+ if(best>=0){anchor=best;sample();}
+});
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('[data-s]').forEach(x=>x.classList.remove('on'));b.classList.add('on');strategy=b.dataset.s;sample();});
+$('resample').onclick=sample;$('newBatch').onclick=newBatch;
+newBatch();
+
+// ---------- Classification charts ----------
+const cls={
+ 1:{Random:[[0.748,0.083],[0.400,0.242],[0.552,0.298],[0.441,0.232]],
+    MedicalNet:[[0.790,0.101],[0.380,0.064],[0.918,0.086],[0.534,0.068]],
+    'Proposed CL':[[0.877,0.072],[0.708,0.189],[0.638,0.161],[0.652,0.137]]},
+ 2:{Random:[[0.467,0.115],[0,0],[0,0],[0,0]],
+    MedicalNet:[[0.418,0.062],[0.069,0.138],[0.061,0.122],[0.065,0.130]],
+    'Proposed CL':[[0.757,0.033],[0.599,0.089],[0.524,0.152],[0.534,0.058]]}
+};
+const colors={Random:'#9a9a9a',MedicalNet:'#e0a526','Proposed CL':'#2f6fdb'};
+const notes={
+ 1:"<b>Internal (Table 1):</b> Pretraining helps — the from-scratch model is weakest. The CL-initialized model has the best AUC (0.877), precision (0.708) and F1 (0.652). MedicalNet wins only on recall (0.918 vs 0.638).",
+ 2:"<b>External (Table 2):</b> Both baselines essentially fail on data from different years and scanners (the random model has zero precision/recall/F1; AUCs below 0.5). The CL model keeps AUC 0.757 — improvements of 62.1% over random init and 81.1% over MedicalNet, per the paper."
+};
+function drawCls(ds){
+ const m=['AUC','Precision','Recall','F1-score'];
+ const tr=Object.keys(cls[ds]).map(k=>({x:m,y:cls[ds][k].map(v=>v[0]),error_y:{type:'data',array:cls[ds][k].map(v=>v[1]),visible:true,color:'#555'},name:k,type:'bar',marker:{color:colors[k]}}));
+ Plotly.react('clsChart',tr,{barmode:'group',font,yaxis:{range:[0,1.15],title:'score (mean ± std)'},margin:{t:20,b:40,l:55,r:10},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#fff',legend:{orientation:'h',y:-0.12}},plotCfg);
+ $('clsNote').innerHTML=notes[ds];
+}
+document.querySelectorAll('[data-ds]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-ds]').forEach(x=>x.classList.remove('on'));b.classList.add('on');drawCls(b.dataset.ds);});
+drawCls(1);
+
+// ---------- Dice charts ----------
+const dice={1:{Random:[[6.1,8.5],[2.0,2.8]],MedicalNet:[[22.5,10.9],[8.9,4.8]],'Proposed CL':[[31.1,2.4],[15.8,2.1]]},
+            2:{Random:[[4.4,4.2],[1.8,1.9]],MedicalNet:[[4.5,4.6],[1.5,1.7]],'Proposed CL':[[30.7,0.3],[16.0,0.3]]}};
+function drawDice(ds){
+ const m=['2D Dice (%)','3D Dice (%)'];
+ const tr=Object.keys(dice[ds]).map(k=>({x:m,y:dice[ds][k].map(v=>v[0]),error_y:{type:'data',array:dice[ds][k].map(v=>v[1]),visible:true,color:'#555'},name:k,type:'bar',marker:{color:colors[k]},text:dice[ds][k].map(v=>v[0]+'%'),textposition:'outside'}));
+ Plotly.react('diceChart',tr,{barmode:'group',font,title:{text:ds==1?'Table 3 — Dataset 1':'Table 4 — Dataset 2',font:{size:14}},yaxis:{range:[0,42],title:'Dice (mean ± std)'},margin:{t:40,b:40,l:55,r:10},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#fff',legend:{orientation:'h',y:-0.12}},plotCfg);
+}
+document.querySelectorAll('[data-dd]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-dd]').forEach(x=>x.classList.remove('on'));b.classList.add('on');drawDice(b.dataset.dd);});
+drawDice(1);
+
+// ---------- Dice toy ----------
+const dc=$('dice'),dx=dc.getContext('2d'),N=42,cell=10;
+function tumor(i,j){const a=(i-24)/7,b=(j-22)/5.5;return a*a+b*b<=1;}
+function drawDiceToy(){
+ const bx=+$('bx').value*N,by=+$('by').value*N,bs=+$('bs').value,th=+$('th').value;
+ $('vth').textContent=th.toFixed(2);
+ let inter=0,A=0,T=0;
+ dx.clearRect(0,0,dc.width,dc.height);
+ for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+  const h=Math.exp(-((i-bx)**2+(j-by)**2)/(2*bs*bs)); // already in [0,1] with max 1 at center
+  const a=h>=th,t=tumor(i,j);
+  if(a)A++;if(t)T++;if(a&&t)inter++;
+  let col;
+  if(a&&t)col='#2a9d6f';else if(a)col='#e9b44c';else if(t)col='#5b8fe0';
+  else{const g=Math.round(245-h*60);col=`rgb(${g},${g},${g})`;}
+  dx.fillStyle=col;dx.fillRect(i*cell,j*cell,cell-0.5,cell-0.5);
+ }
+ const d=(A+T)?2*inter/(A+T):0;
+ $('diceOut').innerHTML=`Overlap = ${inter} cells · Attention = ${A} · Tumor = ${T} &nbsp;→&nbsp; Dice = 2×${inter}/(${A}+${T}) = <b>${(d*100).toFixed(1)}%</b>`;
+}
+['bx','by','bs','th'].forEach(id=>$(id).addEventListener('input',drawDiceToy));
+drawDiceToy();
+
+// ---------- Ablation ----------
+const ab={names:['Global only','Local only','Tumor location excluded','Contrastive loss','Hard negative sampling','Proposed method'],
+ auc:[0.608,0.567,0.683,0.692,0.450,0.757],f1:[0.124,0.434,0.523,0.559,0.364,0.534]};
+function drawAb(k){
+ const vals=ab[k];const mx=Math.max(...vals);
+ Plotly.react('abChart',[{y:ab.names,x:vals,type:'bar',orientation:'h',text:vals.map(v=>v.toFixed(3)),textposition:'outside',
+  marker:{color:ab.names.map((n,i)=>n==='Proposed method'?'#2f6fdb':(vals[i]===mx?'#2a9d6f':'#b9c3d6'))}}],
+  {font,xaxis:{range:[0,0.9],title:k==='auc'?'Mean AUC (Dataset 2)':'Mean F1 (Dataset 2)'},margin:{t:20,b:50,l:180,r:30},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#fff'},plotCfg);
+}
+document.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-ab]').forEach(x=>x.classList.remove('on'));b.classList.add('on');drawAb(b.dataset.ab);});
+drawAb('auc');
+</script>
+</body>
+</html>

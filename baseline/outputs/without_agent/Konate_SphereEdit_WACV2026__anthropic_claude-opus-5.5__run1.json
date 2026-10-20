@@ -1,0 +1,7 @@
+{
+  "model": "anthropic/claude-opus-5.5",
+  "paper": "Konate_SphereEdit_WACV2026.pdf",
+  "input_tokens": 17739,
+  "output_tokens": 21271,
+  "finish_reason": "stop"
+}
