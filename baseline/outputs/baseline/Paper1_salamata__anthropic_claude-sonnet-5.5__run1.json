@@ -1,0 +1,6 @@
+{
+  "model": "anthropic/claude-sonnet-5.5",
+  "input_tokens": 17739,
+  "output_tokens": 13785,
+  "finish_reason": "stop"
+}

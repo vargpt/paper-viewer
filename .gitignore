@@ -6,4 +6,4 @@ __pycache__/
 traces/live_*.jsonl
 .paperviewer/
 .venv/
-outputs/
+/outputs/
