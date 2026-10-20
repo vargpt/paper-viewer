@@ -1,0 +1,744 @@
+<title>SphereEdit, Explained</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~68ch) with wider "figure" panels for each interactive; attribute colours a/b/c carry meaning everywhere. */
+:root {
+  --bg: #F3F5F7;
+  --surface: #FFFFFF;
+  --ink: #16202B;
+  --muted: #5A6675;
+  --line: #D8DEE5;
+  --a: #0D7A79;
+  --b: #B2386A;
+  --c: #A86F12;
+  --a-soft: rgba(13,122,121,.16);
+  --b-soft: rgba(178,56,106,.16);
+  --c-soft: rgba(168,111,18,.22);
+  --face: #E7EBEF;
+  --font-display: "Spectral", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F141A; --surface: #171E27; --ink: #E5EAF0; --muted: #9AA6B4; --line: #2A3440;
+    --a: #3CC3BF; --b: #EE70A1; --c: #E4AA4E;
+    --a-soft: rgba(60,195,191,.2); --b-soft: rgba(238,112,161,.2); --c-soft: rgba(228,170,78,.28);
+    --face: #222B36;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F141A; --surface: #171E27; --ink: #E5EAF0; --muted: #9AA6B4; --line: #2A3440;
+  --a: #3CC3BF; --b: #EE70A1; --c: #E4AA4E;
+  --a-soft: rgba(60,195,191,.2); --b-soft: rgba(238,112,161,.2); --c-soft: rgba(228,170,78,.28);
+  --face: #222B36;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+}
+.wrap {
+  max-width: 980px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 72px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+.prose { max-width: 68ch; }
+.prose p + p { margin-top: .8em; }
+p { margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); letter-spacing: -.01em; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.15rem; }
+.eyebrow { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+a { color: var(--a); }
+em.ta { font-style: normal; color: var(--a); font-weight: 600; }
+em.tb { font-style: normal; color: var(--b); font-weight: 600; }
+em.tc { font-style: normal; color: var(--c); font-weight: 600; }
+.eq {
+  font-family: var(--font-mono); font-size: .95rem;
+  padding: 10px 14px; border-left: 2px solid var(--line);
+  overflow-x: auto; white-space: nowrap;
+}
+section { display: flex; flex-direction: column; gap: 18px; }
+.sec-head { display: flex; flex-direction: column; gap: 6px; }
+
+/* header */
+header { display: flex; flex-direction: column; gap: 18px; }
+.authors { color: var(--muted); font-size: .95rem; }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-family: var(--font-mono); font-size: .78rem; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+
+/* figure panels */
+.fig {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; display: grid; gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.fig.single { grid-template-columns: minmax(0,1fr); }
+@media (max-width: 760px) { .fig { grid-template-columns: minmax(0,1fr); padding: 16px; } }
+.fig > * { min-width: 0; }
+.fig-cap { font-size: .88rem; color: var(--muted); grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 12px; }
+.stage { display: flex; justify-content: center; align-items: center; }
+canvas { display: block; width: 100%; max-width: 420px; aspect-ratio: 1; touch-action: none; }
+.controls { display: flex; flex-direction: column; gap: 16px; }
+
+/* tabs & buttons */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+button {
+  font: inherit; font-size: .88rem; color: var(--ink); background: transparent;
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button[aria-pressed="true"], button[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--a); outline-offset: 2px; }
+
+label.slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; font-size: .9rem; }
+label.slider output { font-family: var(--font-mono); font-variant-numeric: tabular-nums; min-width: 5.5ch; text-align: right; }
+input[type="range"] { width: 100%; accent-color: var(--ink); }
+select { font: inherit; font-size: .9rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+
+/* lambda bars */
+.lams { display: flex; flex-direction: column; gap: 8px; }
+.lam { display: grid; grid-template-columns: 8.5em 1fr 4.5em; gap: 10px; align-items: center; font-size: .88rem; }
+.lam .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track { position: relative; height: 10px; background: var(--bg); border-radius: 3px; }
+.track::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+.fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.lam .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.readout { font-size: .95rem; padding: 12px 14px; background: var(--bg); border-radius: 8px; }
+.readout .mono { font-size: .85rem; }
+
+/* pipeline */
+.steps { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; }
+@media (max-width: 640px) { .steps { grid-template-columns: minmax(0,1fr); } }
+.step { text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; }
+.step .n { font-family: var(--font-mono); font-size: .75rem; opacity: .75; }
+.algo {
+  font-family: var(--font-mono); font-size: .82rem; line-height: 1.75;
+  background: var(--bg); border-radius: 8px; padding: 12px 0; overflow-x: auto; margin: 0;
+}
+.algo span { display: block; padding: 0 14px; white-space: pre; border-left: 3px solid transparent; }
+.algo span.on { background: var(--a-soft); border-left-color: var(--a); }
+.step-detail { display: flex; flex-direction: column; gap: 12px; }
+
+/* mask legend */
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .85rem; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.stat { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.stat b { display: block; font-family: var(--font-mono); font-size: 1.2rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .78rem; color: var(--muted); }
+.verdict { font-size: .92rem; min-height: 3em; }
+
+/* vector svg */
+svg text { font-family: var(--font-mono); font-size: 12px; }
+
+/* table */
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-family: var(--font-mono); font-size: .78rem; font-weight: 500; color: var(--muted); letter-spacing: .03em; }
+td.num { font-family: var(--font-mono); font-size: .9rem; position: relative; }
+td.best { font-weight: 600; }
+td.best::before { content: "●"; color: var(--a); font-size: .6rem; margin-right: 6px; vertical-align: 2px; }
+tr.ours td { background: var(--a-soft); }
+tr.ours td:first-child { font-weight: 600; }
+
+/* criteria */
+.criteria { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
+@media (max-width: 760px) { .criteria { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 420px) { .criteria { grid-template-columns: minmax(0,1fr); } }
+.crit { border-top: 2px solid var(--ink); padding-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.crit h3 { font-size: 1.05rem; }
+.crit p { font-size: .9rem; color: var(--muted); }
+
+.lims { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; }
+@media (max-width: 640px) { .lims { grid-template-columns: minmax(0,1fr); } }
+.lims > div { display: flex; flex-direction: column; gap: 6px; }
+
+footer { font-size: .85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">WACV · Training-free image editing</span>
+  <h1>SphereEdit: Spherical Semantic Editing in Diffusion Models</h1>
+  <p class="authors">Salamata Konate, Hassan Hamidi, Elham Dolatabadi, Frank Rudzicz, Laleh Seyyed-Kalantri · York University, Vector Institute, Dalhousie University, CIFAR</p>
+  <p class="lede">SphereEdit edits images with a pretrained diffusion model, without any training. Each attribute you ask for (glasses, lipstick, age) becomes a unit-length direction. Angles on a sphere decide how much of each attribute to apply, and the model's own cross-attention decides where in the image it goes.</p>
+  <div class="chips">
+    <span class="chip">Stable Diffusion v1.5</span>
+    <span class="chip">50 DDIM steps</span>
+    <span class="chip">~12 s for 3 attributes on one L40</span>
+    <span class="chip">No fine-tuning</span>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">The problem</span>
+    <h2>Edits that leak, drift, and don't combine</h2>
+  </div>
+  <div class="prose">
+    <p>Adding lipstick should change the lips and nothing else. In practice, existing editors fall short in three ways. Optimization and inversion methods are slow and let the person's identity drift. Linear latent edits treat an attribute as a global shift, so the change bleeds into unrelated regions and two edits don't stack cleanly. Attention-rewiring methods depend on hand-picked layers and heads, so "lipstick" can end up tinting the cheeks.</p>
+    <p>The authors set four requirements for a better editor:</p>
+  </div>
+  <div class="criteria">
+    <div class="crit"><h3>Localized</h3><p>Only the regions relevant to the attribute change.</p></div>
+    <div class="crit"><h3>Composable</h3><p>Several attributes combine predictably.</p></div>
+    <div class="crit"><h3>Stable</h3><p>Bounded magnitude, so nothing over-saturates.</p></div>
+    <div class="crit"><h3>Training-free</h3><p>The diffusion model is used as is.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Core idea</span>
+    <h2>Attributes are directions on a unit sphere</h2>
+  </div>
+  <div class="prose">
+    <p>At every denoising step, the UNet is run twice: once with the attribute prompt <span class="mono">c<sub>k</sub></span> and once with an empty prompt <span class="mono">c<sub>∅</sub></span>. The difference between the two noise predictions is what the model thinks the attribute looks like at this step:</p>
+  </div>
+  <div class="eq">v<sub>k</sub>(t) = ε<sub>θ</sub>(z<sub>t</sub>, t, c<sub>k</sub>) − ε<sub>θ</sub>(z<sub>t</sub>, t, c<sub>∅</sub>)  →  v̂<sub>k</sub> = v<sub>k</sub> / ‖v<sub>k</sub>‖<sub>2</sub></div>
+  <div class="prose">
+    <p>Normalizing removes scale differences between attributes. What remains is a direction, and directions live on a sphere. Spherical coordinates then give each attribute a weight λ<sub>k</sub>. The weights always lie on the unit sphere, so the total edit stays bounded however you mix them:</p>
+  </div>
+  <div class="eq">λ<sub>1</sub> = cos θ,   λ<sub>2</sub> = sin θ cos φ,   λ<sub>3</sub> = sin θ sin φ        Δε<sub>t</sub> = Σ λ<sub>k</sub> v̂<sub>k</sub></div>
+  <div class="prose"><p>The same formula covers one, two or three attributes. Try each case below.</p></div>
+
+  <div class="fig" id="geo">
+    <div class="stage"><canvas id="geoCanvas" width="420" height="420" aria-label="Geometry of the spherical coefficients"></canvas></div>
+    <div class="controls">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-mode="1" aria-selected="false">1D · antipodal</button>
+        <button role="tab" data-mode="2" aria-selected="true">2D · angular</button>
+        <button role="tab" data-mode="3" aria-selected="false">3D · spherical</button>
+      </div>
+      <div id="ctl1" hidden>
+        <div class="controls">
+          <label class="slider">Attribute <select id="attr1">
+            <option value="age">Age</option><option value="female">Female</option><option value="cyprus">Cyprus</option>
+          </select><span></span></label>
+          <label class="slider">Scale <input type="range" id="scale1" min="-7.5" max="7.5" step="0.5" value="5"><output id="scale1o">+5.0</output></label>
+        </div>
+      </div>
+      <div id="ctl2">
+        <div class="controls">
+          <label class="slider">Pair <select id="pair2">
+            <option value="0">Old / Asian (faces, Fig. 1)</option>
+            <option value="1">Truck / Cartoon (cars)</option>
+            <option value="2">Cat / Fox (dogs)</option>
+            <option value="3">Sketch / Cubism (art)</option>
+          </select><span></span></label>
+          <label class="slider">θ <input type="range" id="theta2" min="0" max="360" step="1" value="45"><output id="theta2o">45°</output></label>
+          <p class="muted" style="font-size:.85rem">You can also drag the dot on the circle.</p>
+        </div>
+      </div>
+      <div id="ctl3" hidden>
+        <div class="controls">
+          <label class="slider">θ <input type="range" id="theta3" min="0" max="180" step="1" value="55"><output id="theta3o">55°</output></label>
+          <label class="slider">φ <input type="range" id="phi3" min="0" max="360" step="1" value="45"><output id="phi3o">45°</output></label>
+          <div class="tabs">
+            <button id="eq3">Equal mix</button>
+            <button id="only1">Glasses only</button>
+            <button id="only2">Lipstick only</button>
+            <button id="only3">Young only</button>
+          </div>
+        </div>
+      </div>
+      <div class="lams" id="lams"></div>
+      <div class="readout" id="geoRead"></div>
+    </div>
+    <p class="fig-cap" id="geoCap"></p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Method · one denoising step</span>
+    <h2>Five steps inside the sampler</h2>
+  </div>
+  <div class="prose"><p>Everything happens inside a normal DDIM step. SphereEdit only changes the noise prediction before the scheduler uses it. Pick a step to see what it does and which lines of Algorithm 1 it corresponds to.</p></div>
+  <div class="fig single">
+    <div class="steps" role="tablist" id="steps"></div>
+    <div class="fig" style="border:0;padding:0;background:transparent">
+      <div class="step-detail" id="stepDetail"></div>
+      <pre class="algo" id="algo"></pre>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Method · steps 2 and 3</span>
+    <h2>Where to edit: thresholding cross-attention</h2>
+  </div>
+  <div class="prose">
+    <p>Cross-attention shows which pixels each prompt token attends to. SphereEdit builds a separate map <span class="mono">M<sub>k</sub></span> for each attribute's own tokens and keeps the pixels above the quantile <span class="mono">q</span>, giving a region <span class="mono">R<sub>k</sub></span>. Where two regions overlap (<span class="mono">S<sub>jk</sub> = R<sub>j</sub> ∩ R<sub>k</sub></span>), the two directions could interfere, so they are decorrelated there and only there.</p>
+    <p>The face below is a simplified illustration. Glasses attention is sharp around the eyes, and lipstick attention is weaker and more diffuse, as the paper observes in Fig. 5. Move <span class="mono">q</span> and watch the regions and their overlap.</p>
+  </div>
+  <div class="fig">
+    <div class="stage"><canvas id="maskCanvas" width="420" height="420" aria-label="Illustrative attention masks for glasses and lipstick"></canvas></div>
+    <div class="controls">
+      <label class="slider">q <input type="range" id="q" min="0" max="0.95" step="0.05" value="0.8"><output id="qo">0.80</output></label>
+      <div class="tabs">
+        <button id="viewRegions" aria-pressed="true">Regions R<sub>k</sub></button>
+        <button id="viewHeat" aria-pressed="false">Raw attention M<sub>k</sub></button>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--a)"></i>Glasses</span>
+        <span><i style="background:var(--b)"></i>Lipstick</span>
+        <span><i style="background:var(--c)"></i>Overlap S</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="sA">–</b><span>of image: glasses</span></div>
+        <div class="stat"><b id="sB">–</b><span>of image: lipstick</span></div>
+        <div class="stat"><b id="sS">–</b><span>overlap S</span></div>
+      </div>
+      <p class="verdict" id="verdict"></p>
+    </div>
+    <p class="fig-cap">Illustrative maps, not model output. A higher q keeps only the most strongly attended pixels. In the paper, low thresholds let lipstick spill onto the skin, very high ones fragment the target, and q = 0.8 is the default.</p>
+  </div>
+
+  <div class="prose">
+    <p>Inside the overlap, the second direction loses its component along the first, using a masked Gram–Schmidt step:</p>
+  </div>
+  <div class="eq">v<sub>k</sub> ← v<sub>k</sub> − ⟨v<sub>k</sub>, v<sub>j</sub>⟩<sub>S<sub>jk</sub></sub> (v<sub>j</sub> ⊙ S<sub>jk</sub>)</div>
+  <div class="fig">
+    <div class="stage">
+      <svg id="gs" viewBox="0 0 300 230" style="width:100%;max-width:380px" role="img" aria-label="Gram-Schmidt projection of v_k against v_j"></svg>
+    </div>
+    <div class="controls">
+      <label class="slider">Angle between v<sub>j</sub> and v<sub>k</sub> <input type="range" id="alpha" min="15" max="165" step="1" value="50"><output id="alphao">50°</output></label>
+      <div class="tabs">
+        <button id="inS" aria-pressed="true">Pixel inside overlap</button>
+        <button id="outS" aria-pressed="false">Pixel outside overlap</button>
+      </div>
+      <div class="readout" id="gsRead"></div>
+    </div>
+    <p class="fig-cap">Orthogonalizing everywhere would distort what each attribute means. Restricting it to S<sub>jk</sub> removes interference only where both edits compete for the same pixels.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Results</span>
+    <h2>Two compositional edits on 100 FFHQ faces</h2>
+  </div>
+  <div class="prose">
+    <p>The comparison covers SEGA, Composable Diffusion, Cycle Diffusion and TurboEdit. CLIP-T measures how well the image matches the requested text. CLIP-I and DINO measure how well identity and structure are preserved. LPIPS measures perceptual change, where lower is better.</p>
+  </div>
+  <div class="fig single">
+    <div class="tabs" id="taskTabs">
+      <button data-task="0" aria-pressed="true">Glasses + Mustache</button>
+      <button data-task="1" aria-pressed="false">Eyebrow + Lipstick</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>CLIP-T ↑</th><th>CLIP-I ↑</th><th>DINO ↑</th><th>LPIPS ↓</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="verdict" id="tblNote"></p>
+    <p class="fig-cap">Table 1 of the paper. ● marks the best value in each column.</p>
+  </div>
+  <div class="prose">
+    <p>The qualitative comparisons (Fig. 3) point the same way. Composable Diffusion and TurboEdit tend to change facial identity and shift the global tone. SEGA and Cycle Diffusion tend to under-edit subtle attributes. Beyond faces, the same procedure edits cars (Truck + Cartoon), dogs (Cat + Fox), cats (Dog + Leopard) and artwork (Sketch + Cubism).</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Open questions</span>
+    <h2>Limitations</h2>
+  </div>
+  <div class="lims">
+    <div><h3>Beyond three attributes</h3><p>The experiments use at most three attributes. The formula extends to more dimensions, but it is not yet known whether many-way trade-offs stay interpretable and stable.</p></div>
+    <div><h3>What is the opposite?</h3><p>"Old" versus "young" works naturally. In medical imaging, the opposite of a disease could be health or another condition. For demographic attributes such as race, opposites are not well defined. This matters for how the geometry is applied to sensitive attributes.</p></div>
+  </div>
+</section>
+
+<footer>
+  Summary of Konate et al., "SphereEdit: Spherical Semantic Editing in Diffusion Models", WACV. Code: <a href="https://github.com/sala-kon/SphereEdit" target="_blank" rel="noopener">github.com/sala-kon/SphereEdit</a>. The attention maps on this page are illustrations. The table values are taken from the paper.
+</footer>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const css = () => {
+    const s = getComputedStyle(document.documentElement);
+    const g = (n) => s.getPropertyValue(n).trim();
+    return { ink: g('--ink'), muted: g('--muted'), line: g('--line'), a: g('--a'), b: g('--b'), c: g('--c'),
+      aS: g('--a-soft'), bS: g('--b-soft'), cS: g('--c-soft'), face: g('--face'), surface: g('--surface'), bg: g('--bg'),
+      mono: g('--font-mono') };
+  };
+  const fmt = (x, d = 2) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(d);
+  const rad = (d) => d * Math.PI / 180;
+
+  function setupCanvas(cv) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth || 420;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr);
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr * w / 420, 0, 0, dpr * w / 420, 0, 0);
+    return ctx;
+  }
+
+  /* ---------- Geometry widget ---------- */
+  const PAIRS = [
+    { a: 'Old', b: 'Asian', na: 'young' },
+    { a: 'Truck', b: 'Cartoon' },
+    { a: 'Cat', b: 'Fox' },
+    { a: 'Sketch', b: 'Cubism' },
+  ];
+  const ONE = {
+    age: { name: 'Age', neg: 'removes wrinkles and softens features (younger)', pos: 'adds age-related texture (older)' },
+    female: { name: 'Female', neg: 'reduces the attribute: less facial softness', pos: 'adjusts facial softness and expression' },
+    cyprus: { name: 'Cyprus', neg: 'moves away from the condition, though the opposite of an ethnicity is not well defined', pos: 'alters ethnicity-related appearance cues' },
+  };
+  const TRI = ['Glasses', 'Lipstick', 'Young'];
+  const st = { mode: 2, scale: 5, attr: 'age', pair: 0, theta2: 45, theta3: 55, phi3: 45 };
+
+  const geoCv = $('geoCanvas');
+  let geoCtx = setupCanvas(geoCv);
+
+  function arrow(ctx, x0, y0, x1, y1, color, w = 2.5) {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    const ang = Math.atan2(y1 - y0, x1 - x0), L = 10;
+    if (Math.hypot(x1 - x0, y1 - y0) < 4) return;
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - L * Math.cos(ang - 0.4), y1 - L * Math.sin(ang - 0.4));
+    ctx.lineTo(x1 - L * Math.cos(ang + 0.4), y1 - L * Math.sin(ang + 0.4));
+    ctx.closePath(); ctx.fill();
+  }
+  function label(ctx, t, x, y, color, align = 'center') {
+    ctx.fillStyle = color; ctx.font = '12px ' + css().mono; ctx.textAlign = align; ctx.textBaseline = 'middle';
+    ctx.fillText(t, x, y);
+  }
+
+  function drawGeo() {
+    const c = css(), ctx = geoCtx;
+    ctx.clearRect(0, 0, 420, 420);
+    const cx = 210, cy = 210, R = 140;
+    if (st.mode === 1) {
+      const y = 210, x0 = 40, x1 = 380, sc = (v) => cx + v / 7.5 * (x1 - cx);
+      ctx.strokeStyle = c.line; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+      for (let v = -7.5; v <= 7.5; v += 2.5) {
+        ctx.beginPath(); ctx.moveTo(sc(v), y - 6); ctx.lineTo(sc(v), y + 6); ctx.stroke();
+        label(ctx, (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v), sc(v), y + 22, c.muted);
+      }
+      const col = st.scale >= 0 ? c.a : c.b;
+      arrow(ctx, cx, y, sc(st.scale), y, col, 4);
+      ctx.fillStyle = c.ink; ctx.beginPath(); ctx.arc(cx, y, 4, 0, 7); ctx.fill();
+      const nm = ONE[st.attr].name;
+      label(ctx, '− ' + nm, x0 + 10, y - 40, c.b, 'left');
+      label(ctx, '+ ' + nm, x1 - 10, y - 40, c.a, 'right');
+      label(ctx, 'v̂ and −v̂ point to opposite meanings', cx, 110, c.muted);
+      label(ctx, 'edit = ' + fmt(st.scale, 1) + ' · v̂(' + nm + ')', cx, 310, c.ink);
+      return;
+    }
+    if (st.mode === 2) {
+      const p = PAIRS[st.pair], th = rad(st.theta2), la = Math.cos(th), lb = Math.sin(th);
+      ctx.strokeStyle = c.line; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - R - 20, cy); ctx.lineTo(cx + R + 20, cy);
+      ctx.moveTo(cx, cy - R - 20); ctx.lineTo(cx, cy + R + 20); ctx.stroke();
+      label(ctx, '+' + p.a, cx + R + 14, cy - 14, c.a, 'right');
+      label(ctx, '+' + p.b, cx + 8, cy - R - 12, c.b, 'left');
+      label(ctx, '−' + p.a, cx - R - 14, cy - 14, c.muted, 'left');
+      label(ctx, '−' + p.b, cx + 8, cy + R + 12, c.muted, 'left');
+      // arc from 0 to theta
+      ctx.strokeStyle = c.ink; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, cy, 34, 0, -th, true); ctx.stroke();
+      label(ctx, 'θ', cx + 46 * Math.cos(th / 2), cy - 46 * Math.sin(th / 2), c.ink);
+      const px = cx + R * la, py = cy - R * lb;
+      ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
+      ctx.strokeStyle = c.a; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, cy); ctx.stroke();
+      ctx.strokeStyle = c.b; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(cx, py); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.lineWidth = 5; ctx.strokeStyle = c.a; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, cy); ctx.stroke();
+      ctx.strokeStyle = c.b; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, py); ctx.stroke();
+      arrow(ctx, cx, cy, px, py, c.ink, 2.5);
+      ctx.fillStyle = c.surface; ctx.strokeStyle = c.ink; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(px, py, 9, 0, 7); ctx.fill(); ctx.stroke();
+      return;
+    }
+    // 3D
+    const yaw = rad(-35), pitch = rad(22);
+    const proj = (x, y, z) => {
+      const sx = x * Math.cos(yaw) - y * Math.sin(yaw);
+      const d = x * Math.sin(yaw) + y * Math.cos(yaw);
+      const sy = z * Math.cos(pitch) - d * Math.sin(pitch);
+      return [cx + R * sx, cy - R * sy, d * Math.cos(pitch) + z * Math.sin(pitch)];
+    };
+    ctx.strokeStyle = c.line; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+    const ring = (fn) => {
+      ctx.beginPath();
+      for (let i = 0; i <= 96; i++) { const t = i / 96 * 2 * Math.PI; const [x, y] = proj(...fn(t)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.stroke();
+    };
+    ctx.lineWidth = 1;
+    for (const zl of [-0.5, 0, 0.5]) { const r = Math.sqrt(1 - zl * zl); ring((t) => [r * Math.cos(t), r * Math.sin(t), zl]); }
+    ring((t) => [Math.cos(t), 0, Math.sin(t)]);
+    ring((t) => [0, Math.cos(t), Math.sin(t)]);
+    const axes = [[[1, 0, 0], c.a, TRI[0]], [[0, 1, 0], c.b, TRI[1]], [[0, 0, 1], c.c, TRI[2]]];
+    const o = proj(0, 0, 0);
+    for (const [v, col, nm] of axes) {
+      const [x, y] = proj(v[0] * 1.25, v[1] * 1.25, v[2] * 1.25);
+      ctx.globalAlpha = .9; arrow(ctx, o[0], o[1], x, y, col, 1.5); ctx.globalAlpha = 1;
+      const [lx, ly] = proj(v[0] * 1.42, v[1] * 1.42, v[2] * 1.42);
+      label(ctx, nm, lx, ly, col);
+    }
+    const th = rad(st.theta3), ph = rad(st.phi3);
+    const l1 = Math.cos(th), l2 = Math.sin(th) * Math.cos(ph), l3 = Math.sin(th) * Math.sin(ph);
+    const P = proj(l1, l2, l3), F = proj(l1, l2, 0);
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = c.muted; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(P[0], P[1]); ctx.lineTo(F[0], F[1]); ctx.lineTo(o[0], o[1]); ctx.stroke();
+    ctx.setLineDash([]);
+    arrow(ctx, o[0], o[1], P[0], P[1], c.ink, 2.5);
+    ctx.fillStyle = c.surface; ctx.strokeStyle = c.ink; ctx.lineWidth = 2.5;
+    ctx.globalAlpha = P[2] < -0.05 ? 0.55 : 1;
+    ctx.beginPath(); ctx.arc(P[0], P[1], 8, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function lamRows(rows) {
+    $('lams').innerHTML = rows.map(([nm, v, col, lim]) => {
+      const L = lim || 1, w = Math.min(Math.abs(v) / L, 1) * 50;
+      const left = v >= 0 ? 50 : 50 - w;
+      return `<div class="lam"><span class="name">${nm}</span><div class="track"><div class="fill" style="left:${left}%;width:${w}%;background:${col}"></div></div><span class="val">${fmt(v, L > 1 ? 1 : 2)}</span></div>`;
+    }).join('');
+  }
+  function word(v) { const a = Math.abs(v); return a > .85 ? 'full' : a > .5 ? 'strong' : 'light'; }
+
+  function updateGeo() {
+    document.querySelectorAll('#geo [role=tab]').forEach((b) => b.setAttribute('aria-selected', String(+b.dataset.mode === st.mode)));
+    [1, 2, 3].forEach((m) => { $('ctl' + m).hidden = m !== st.mode; });
+    let read = '', cap = '';
+    if (st.mode === 1) {
+      const o = ONE[st.attr];
+      lamRows([['scale · ' + o.name, st.scale, st.scale >= 0 ? 'var(--a)' : 'var(--b)', 7.5]]);
+      read = st.scale === 0 ? 'Scale 0 leaves the image unchanged.'
+        : `<b>${st.scale > 0 ? 'Positive' : 'Negative'} scale:</b> ${st.scale > 0 ? o.pos : o.neg}. Only the "${o.name}" prompt is needed. The negative direction comes for free.`;
+      cap = 'Antipodal control (Fig. 4): a single direction scaled between −7.5 and +7.5. Negating the vector inverts the attribute, so old ↔ young needs only the "old" prompt.';
+    } else if (st.mode === 2) {
+      const p = PAIRS[st.pair], th = rad(st.theta2), la = Math.cos(th), lb = Math.sin(th);
+      lamRows([['λ_a · ' + p.a, la, 'var(--a)'], ['λ_b · ' + p.b, lb, 'var(--b)']]);
+      const parts = [];
+      const nm = (v, n, neg) => v >= 0 ? '+' + n : (neg ? n.toLowerCase() === 'old' ? 'young (−Old)' : '−' + n : '−' + n);
+      if (Math.abs(la) > .15) parts.push(`${word(la)} <em class="ta">${nm(la, p.a, p.na)}</em>`);
+      if (Math.abs(lb) > .15) parts.push(`${word(lb)} <em class="tb">${nm(lb, p.b)}</em>`);
+      read = `<span class="mono">Δε = ${la.toFixed(2)}·v̂<sub>${p.a}</sub> + ${lb.toFixed(2)}·v̂<sub>${p.b}</sub></span><br>Result: ${parts.join(' with ')}.` +
+        (la < -.15 || lb < -.15 ? (st.pair === 0 && lb >= -.15 ? '' : ' <span class="muted">A negative weight only makes sense where the attribute has a clear opposite. See Limitations.</span>') : '');
+      cap = 'Angular control (Fig. 1): θ = 0 gives attribute a only, θ = 90° gives b only, θ = 45° gives an equal blend, and θ = 180° gives the opposite of a. Because cos² + sin² = 1, the edit strength never grows as you mix.';
+    } else {
+      const th = rad(st.theta3), ph = rad(st.phi3);
+      const l = [Math.cos(th), Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph)];
+      lamRows([['λ₁ · Glasses', l[0], 'var(--a)'], ['λ₂ · Lipstick', l[1], 'var(--b)'], ['λ₃ · Young', l[2], 'var(--c)']]);
+      const norm = Math.sqrt(l[0] ** 2 + l[1] ** 2 + l[2] ** 2);
+      read = `<span class="mono">‖λ‖ = ${norm.toFixed(2)}</span> for any θ, φ. θ moves weight between Glasses and the other two. φ splits the rest between Lipstick and Young.`;
+      cap = 'Spherical composition: three attributes, two angles. The point always lies on the unit sphere, which keeps the combined edit bounded.';
+    }
+    $('geoRead').innerHTML = read; $('geoCap').textContent = cap;
+    $('scale1o').textContent = fmt(st.scale, 1);
+    $('theta2o').textContent = st.theta2 + '°'; $('theta2').value = st.theta2;
+    $('theta3o').textContent = st.theta3 + '°'; $('theta3').value = st.theta3;
+    $('phi3o').textContent = st.phi3 + '°'; $('phi3').value = st.phi3;
+    drawGeo();
+  }
+  document.querySelectorAll('#geo [role=tab]').forEach((b) => b.addEventListener('click', () => { st.mode = +b.dataset.mode; updateGeo(); }));
+  $('scale1').addEventListener('input', (e) => { st.scale = +e.target.value; updateGeo(); });
+  $('attr1').addEventListener('change', (e) => { st.attr = e.target.value; updateGeo(); });
+  $('pair2').addEventListener('change', (e) => { st.pair = +e.target.value; updateGeo(); });
+  $('theta2').addEventListener('input', (e) => { st.theta2 = +e.target.value; updateGeo(); });
+  $('theta3').addEventListener('input', (e) => { st.theta3 = +e.target.value; updateGeo(); });
+  $('phi3').addEventListener('input', (e) => { st.phi3 = +e.target.value; updateGeo(); });
+  $('eq3').addEventListener('click', () => { st.theta3 = 55; st.phi3 = 45; updateGeo(); });
+  $('only1').addEventListener('click', () => { st.theta3 = 0; updateGeo(); });
+  $('only2').addEventListener('click', () => { st.theta3 = 90; st.phi3 = 0; updateGeo(); });
+  $('only3').addEventListener('click', () => { st.theta3 = 90; st.phi3 = 90; updateGeo(); });
+  let dragging = false;
+  const dragTo = (e) => {
+    const r = geoCv.getBoundingClientRect(), k = 420 / r.width;
+    const x = (e.clientX - r.left) * k - 210, y = 210 - (e.clientY - r.top) * k;
+    st.theta2 = (Math.round(Math.atan2(y, x) * 180 / Math.PI) + 360) % 360; updateGeo();
+  };
+  geoCv.addEventListener('pointerdown', (e) => { if (st.mode !== 2) return; dragging = true; geoCv.setPointerCapture(e.pointerId); dragTo(e); });
+  geoCv.addEventListener('pointermove', (e) => { if (dragging) dragTo(e); });
+  geoCv.addEventListener('pointerup', () => { dragging = false; });
+
+  /* ---------- Pipeline ---------- */
+  const ALGO = [
+    'Algorithm 1  SphereEdit (one denoising step t)',
+    ' 1: ε_base ← ε_θ(z_t, t, c_∅)',
+    ' 2: for each active attribute a_k do',
+    ' 3:     v_k ← ε_θ(z_t, t, c_k) − ε_base',
+    ' 4:     v̂_k ← v_k / ‖v_k‖₂',
+    ' 5:     M_k ← CrossAttention(z_t, c_k)',
+    ' 6: end for',
+    ' 7: for each pair (j, k) of active attributes do',
+    ' 8:     S_jk ← Overlap(M_j, M_k)',
+    ' 9:     v_k ← v_k − ⟨v_k, v_j⟩_Sjk (v_j ⊙ S_jk)',
+    '10: end for',
+    '11: λ_k ← SphericalCoefficients(θ, φ)',
+    '12: ε̂(t) ← ε_base + Σ_k λ_k v̂_k',
+    '13: z_{t−1} ← DDIM update using ε̂(t)',
+  ];
+  const STEPS = [
+    { t: 'Edit direction', lines: [1, 2, 3, 4, 6], body: 'Run the UNet twice for each attribute: once with the empty prompt and once with the attribute prompt. Their difference isolates what the attribute contributes, because everything they share (the structure of z<sub>t</sub>) cancels out. Normalizing keeps "lipstick" from overpowering "glasses" just because its raw vector is larger.' },
+    { t: 'Attention maps', lines: [5, 8], body: 'Aggregate the cross-attention over layers and heads, using only the tokens of this attribute\'s condition rather than the whole prompt. "Glasses" lights up the eyes and "beard" the lower face. Thresholding at quantile q gives the region R<sub>k</sub>. Where two regions intersect, the overlap mask is S<sub>jk</sub>.' },
+    { t: 'Overlap projection', lines: [7, 9, 10], body: 'Where two attributes share pixels (mouth and beard, for example), remove the part of v<sub>k</sub> that points along v<sub>j</sub>. This happens only inside S<sub>jk</sub>, so each attribute keeps its full meaning everywhere else.' },
+    { t: 'Spherical mixing', lines: [11], body: 'Turn the user\'s angles (θ, φ) into weights λ<sub>k</sub> on the unit sphere. Each direction is multiplied by its weight, and an optional factor in [0, 1] sets overall visibility. A per-attribute time mask m<sub>k</sub>(t) can switch an edit on only at certain steps, for example applying glasses late so the face forms first.' },
+    { t: 'Scheduler update', lines: [12, 13], body: 'Add the mixed edit Δε<sub>t</sub> to the base noise prediction and give the result to the ordinary DDIM update. Repeating this over all 50 steps steers the trajectory toward the edited image while keeping the original content. Nothing is retrained.' },
+  ];
+  let curStep = 0;
+  $('steps').innerHTML = STEPS.map((s, i) => `<button class="step" role="tab" data-i="${i}"><span class="n">Step ${i + 1}</span>${s.t}</button>`).join('');
+  $('algo').innerHTML = ALGO.map((l) => `<span>${l.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`).join('');
+  function updateSteps() {
+    document.querySelectorAll('#steps .step').forEach((b) => b.setAttribute('aria-selected', String(+b.dataset.i === curStep)));
+    const s = STEPS[curStep];
+    $('stepDetail').innerHTML = `<h3>${curStep + 1}. ${s.t}</h3><p>${s.body}</p>`;
+    $('algo').querySelectorAll('span').forEach((el, i) => el.classList.toggle('on', s.lines.includes(i)));
+  }
+  $('steps').addEventListener('click', (e) => { const b = e.target.closest('.step'); if (b) { curStep = +b.dataset.i; updateSteps(); } });
+
+  /* ---------- Mask demo ---------- */
+  const N = 56;
+  const gauss = (x, y, mx, my, sx, sy) => Math.exp(-(((x - mx) ** 2) / (2 * sx * sx) + ((y - my) ** 2) / (2 * sy * sy)));
+  const inFace = (x, y) => ((x - 28) / 17) ** 2 + ((y - 29) / 22) ** 2 <= 1;
+  const HA = new Float32Array(N * N), HB = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const f = inFace(x, y) ? 1 : 0.25;
+    HA[y * N + x] = f * (gauss(x, y, 21, 24, 3.2, 2.6) + gauss(x, y, 35, 24, 3.2, 2.6) + 0.55 * gauss(x, y, 28, 24, 1.8, 1.4) + 0.08 * gauss(x, y, 28, 26, 10, 7));
+    HB[y * N + x] = f * (0.6 * gauss(x, y, 28, 40, 4.5, 2.3) + 0.32 * gauss(x, y, 28, 34, 9.5, 8.5));
+  }
+  const sortedA = Array.from(HA).sort((a, b) => a - b), sortedB = Array.from(HB).sort((a, b) => a - b);
+  const maxA = sortedA[sortedA.length - 1], maxB = sortedB[sortedB.length - 1];
+  const ms = { q: 0.8, heat: false };
+  const maskCv = $('maskCanvas'); let maskCtx = setupCanvas(maskCv);
+
+  function drawMask() {
+    const c = css(), ctx = maskCtx, cell = 420 / N;
+    const qi = Math.min(N * N - 1, Math.floor(ms.q * (N * N - 1)));
+    const tA = sortedA[qi], tB = sortedB[qi];
+    let nA = 0, nB = 0, nS = 0;
+    ctx.clearRect(0, 0, 420, 420);
+    ctx.fillStyle = c.face;
+    ctx.beginPath(); ctx.ellipse(28 * cell, 29 * cell, 17 * cell, 22 * cell, 0, 0, 7); ctx.fill();
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x, ra = HA[i] > tA, rb = HB[i] > tB;
+      if (ra) nA++; if (rb) nB++; if (ra && rb) nS++;
+      if (ms.heat) {
+        const va = HA[i] / maxA, vb = HB[i] / maxB;
+        if (va > 0.04) { ctx.globalAlpha = Math.min(va, 1) * 0.85; ctx.fillStyle = c.a; ctx.fillRect(x * cell, y * cell, cell + .5, cell + .5); }
+        if (vb > 0.04) { ctx.globalAlpha = Math.min(vb, 1) * 0.75; ctx.fillStyle = c.b; ctx.fillRect(x * cell, y * cell, cell + .5, cell + .5); }
+        ctx.globalAlpha = 1;
+      } else if (ra || rb) {
+        ctx.fillStyle = ra && rb ? c.c : ra ? c.a : c.b;
+        ctx.globalAlpha = ra && rb ? 0.95 : 0.7;
+        ctx.fillRect(x * cell, y * cell, cell + .5, cell + .5);
+        ctx.globalAlpha = 1;
+      }
+    }
+    // face outline hints
+    ctx.strokeStyle = c.muted; ctx.lineWidth = 1.2; ctx.globalAlpha = .7;
+    ctx.beginPath(); ctx.ellipse(28 * cell, 29 * cell, 17 * cell, 22 * cell, 0, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(21 * cell, 24 * cell, 2.2 * cell, 1.2 * cell, 0, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(35 * cell, 24 * cell, 2.2 * cell, 1.2 * cell, 0, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(28 * cell, 27 * cell); ctx.lineTo(26.5 * cell, 33 * cell); ctx.lineTo(29 * cell, 33 * cell); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(28 * cell, 40 * cell, 4 * cell, 1.4 * cell, 0, 0, 7); ctx.stroke();
+    ctx.globalAlpha = 1;
+    const T = N * N, pct = (n) => (100 * n / T).toFixed(1) + '%';
+    $('sA').textContent = pct(nA); $('sB').textContent = pct(nB); $('sS').textContent = pct(nS);
+    $('qo').textContent = ms.q.toFixed(2);
+    let v;
+    if (ms.q < 0.45) v = 'Too loose. Both regions cover large parts of the face and background, so lipstick would spill onto the skin and tone would shift globally.';
+    else if (ms.q < 0.7) v = 'Moderate. Glasses stay near the eyes and lipstick near the mouth. A thin band where they overlap still gets orthogonalized.';
+    else if (ms.q <= 0.85) v = 'Near the paper\'s default (q = 0.8). Tight regions with little or no overlap, which the paper reports as the best balance between edit strength and precision.';
+    else v = 'Very tight. The masks start to fragment the target (diffuse lipstick loses coverage first), and the paper reports weaker edits and identity preservation here.';
+    $('verdict').textContent = v;
+  }
+  $('q').addEventListener('input', (e) => { ms.q = +e.target.value; drawMask(); });
+  $('viewRegions').addEventListener('click', () => { ms.heat = false; $('viewRegions').setAttribute('aria-pressed', 'true'); $('viewHeat').setAttribute('aria-pressed', 'false'); drawMask(); });
+  $('viewHeat').addEventListener('click', () => { ms.heat = true; $('viewHeat').setAttribute('aria-pressed', 'true'); $('viewRegions').setAttribute('aria-pressed', 'false'); drawMask(); });
+
+  /* ---------- Gram-Schmidt ---------- */
+  const gs = { alpha: 50, inside: true };
+  function drawGS() {
+    const svg = $('gs'), ox = 120, oy = 170, L = 110, a = rad(gs.alpha);
+    const kx = ox + L * Math.cos(a), ky = oy - L * Math.sin(a);
+    const jx = ox + L, jy = oy;
+    const proj = Math.cos(a);
+    const px = ox + L * proj, py = oy;
+    const nk = gs.inside ? [px, py, kx, ky] : null;
+    const mk = (id, col) => `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${col}"/></marker>`;
+    let h = `<defs>${mk('mA', 'var(--a)')}${mk('mB', 'var(--b)')}${mk('mC', 'var(--c)')}</defs>`;
+    h += `<line x1="10" y1="${oy}" x2="290" y2="${oy}" stroke="var(--line)" stroke-width="1"/>`;
+    h += `<line x1="${ox}" y1="${oy}" x2="${jx}" y2="${jy}" stroke="var(--a)" stroke-width="3" marker-end="url(#mA)"/>`;
+    h += `<text x="${jx + 4}" y="${jy + 16}" fill="var(--a)">v_j</text>`;
+    h += `<line x1="${ox}" y1="${oy}" x2="${kx}" y2="${ky}" stroke="var(--b)" stroke-width="3" opacity="${gs.inside ? .35 : 1}" marker-end="url(#mB)"/>`;
+    h += `<text x="${kx + (Math.cos(a) < 0 ? -34 : 6)}" y="${ky - 6}" fill="var(--b)">v_k</text>`;
+    if (gs.inside) {
+      h += `<line x1="${kx}" y1="${ky}" x2="${px}" y2="${py}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+      h += `<line x1="${ox}" y1="${oy + 8}" x2="${px}" y2="${oy + 8}" stroke="var(--muted)" stroke-width="2"/>`;
+      h += `<text x="${(ox + px) / 2}" y="${oy + 24}" fill="var(--muted)" text-anchor="middle">⟨v_k,v_j⟩ v_j</text>`;
+      h += `<line x1="${ox}" y1="${oy}" x2="${ox}" y2="${oy - L * Math.sin(a)}" stroke="var(--c)" stroke-width="3" marker-end="url(#mC)"/>`;
+      h += `<text x="${ox - 6}" y="${oy - L * Math.sin(a) - 8}" fill="var(--c)" text-anchor="end">v_k (new)</text>`;
+    }
+    h += `<circle cx="${ox}" cy="${oy}" r="3.5" fill="var(--ink)"/>`;
+    svg.innerHTML = h;
+    $('alphao').textContent = gs.alpha + '°';
+    $('gsRead').innerHTML = gs.inside
+      ? `<span class="mono">cos(v_k, v_j): ${proj.toFixed(2)} → 0.00</span><br>Inside S<sub>jk</sub> the shared component is removed, so the two edits no longer pull the same pixels in the same direction.`
+      : `<span class="mono">cos(v_k, v_j): ${proj.toFixed(2)} (unchanged)</span><br>Outside the overlap, v<sub>k</sub> is left as is and keeps its full meaning.`;
+  }
+  $('alpha').addEventListener('input', (e) => { gs.alpha = +e.target.value; drawGS(); });
+  $('inS').addEventListener('click', () => { gs.inside = true; $('inS').setAttribute('aria-pressed', 'true'); $('outS').setAttribute('aria-pressed', 'false'); drawGS(); });
+  $('outS').addEventListener('click', () => { gs.inside = false; $('outS').setAttribute('aria-pressed', 'true'); $('inS').setAttribute('aria-pressed', 'false'); drawGS(); });
+
+  /* ---------- Table ---------- */
+  const METHODS = ['SEGA', 'Composable Diffusion', 'Cycle Diffusion', 'TurboEdit', 'SphereEdit (ours)'];
+  const DATA = [
+    [[0.2226, 0.7395, 0.6271, 0.1796], [0.2337, 0.6353, 0.3226, 0.3107], [0.2260, 0.6909, 0.4774, 0.2142], [0.2203, 0.6771, 0.6250, 0.2248], [0.2369, 0.7573, 0.7026, 0.1919]],
+    [[0.2230, 0.6960, 0.6011, 0.1870], [0.2290, 0.6227, 0.3860, 0.3589], [0.2238, 0.6562, 0.5229, 0.2332], [0.2333, 0.5871, 0.4702, 0.2252], [0.2321, 0.7275, 0.6836, 0.1436]],
+  ];
+  const NOTES = [
+    'SphereEdit leads on text alignment (CLIP-T), identity (CLIP-I) and structure (DINO). On LPIPS it is second, behind SEGA (0.1919 vs 0.1796).',
+    'SphereEdit leads on CLIP-I, DINO and LPIPS, with the lowest perceptual change of any method. TurboEdit edges it on CLIP-T by 0.0012.',
+  ];
+  function drawTable(t) {
+    const d = DATA[t];
+    const best = [0, 1, 2, 3].map((m) => { const col = d.map((r) => r[m]); return m === 3 ? Math.min(...col) : Math.max(...col); });
+    $('tbody').innerHTML = d.map((r, i) => `<tr class="${i === 4 ? 'ours' : ''}"><td>${METHODS[i]}</td>${r.map((v, m) => `<td class="num${v === best[m] ? ' best' : ''}">${v.toFixed(4)}</td>`).join('')}</tr>`).join('');
+    $('tblNote').textContent = NOTES[t];
+    document.querySelectorAll('#taskTabs button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.task === t)));
+  }
+  $('taskTabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) drawTable(+b.dataset.task); });
+
+  /* ---------- init + theme/resize redraw ---------- */
+  function redrawAll() { geoCtx = setupCanvas(geoCv); maskCtx = setupCanvas(maskCv); drawGeo(); drawMask(); }
+  updateGeo(); updateSteps(); drawMask(); drawGS(); drawTable(0);
+  window.addEventListener('resize', redrawAll);
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll); } catch (e) {}
+  new MutationObserver(redrawAll).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(redrawAll);
+})();
+</script>
