@@ -1,0 +1,4 @@
+claude-agent-sdk
+pymupdf
+python-dotenv
+playwright  # optional: browser checks and screenshots (then: playwright install chromium, or have Google Chrome installed)

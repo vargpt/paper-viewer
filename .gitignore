@@ -7,3 +7,5 @@ traces/live_*.jsonl
 .paperviewer/
 .venv/
 /outputs/
+/multiagent/work/
+.DS_Store

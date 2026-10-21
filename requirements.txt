@@ -7,3 +7,4 @@ claude-agent-sdk
 python-dotenv
 openai
 pypdf
+pymupdf
