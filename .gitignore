@@ -8,4 +8,7 @@ traces/live_*.jsonl
 .venv/
 /outputs/
 /multiagent/work/
+/multiagent/prototype/
+/multiagent/outputs/
+/multiagent/tiktok/
 .DS_Store

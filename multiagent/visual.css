@@ -1,0 +1,41 @@
+/* Styles for visual.js (added to the page CSS). */
+.pv-panels { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 14px; margin: 12px 0; }
+@media (max-width: 640px) { .pv-panels { grid-template-columns: repeat(min(var(--n), 2), minmax(0, 1fr)); gap: 8px; } }
+.pv-panel { margin: 0; }
+.pv-panel figcaption { font-size: .88rem; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+.pv-canvas { position: relative; line-height: 0; }
+.pv-canvas canvas, .pv-wipe img, .pv-wipe canvas { width: 100%; height: auto; display: block; border-radius: 10px; }
+.pv-probe { position: absolute; transform: translate(-50%, -50%); width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid #fff; background: rgba(0, 0, 0, .55); color: #fff; font: 700 13px/22px var(--font); text-align: center;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .5); pointer-events: none; }
+.pv-readout { font-size: .85rem; color: var(--ink-2); margin-top: 6px; line-height: 1.45; }
+.pv-readout b { color: var(--ink); }
+.pv-meter { display: inline-block; vertical-align: middle; width: 70px; height: 8px; border-radius: 4px; background: var(--grid); margin: 0 6px; overflow: hidden; }
+.pv-meter > i { display: block; height: 100%; background: var(--c2); }
+.pv-toggle { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pv-toggle .pv-label { font-size: .9rem; color: var(--ink-2); margin-right: 2px; }
+.btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pv-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.pv-pill { font: inherit; font-size: .85rem; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--ink-2); cursor: pointer; }
+.pv-pill .pv-n { font-weight: 700; }
+.pv-pill.done { color: var(--ink); background: var(--surface); }
+.pv-pill.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pv-mark { margin-left: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .03em; padding: 1px 6px; border-radius: 999px;
+  background: var(--result-bg); color: var(--good-ink); }
+.pv-pill.on .pv-mark { background: #fff; color: var(--accent); }
+.pv-count { font-size: .9rem; color: var(--muted); }
+.pv-step { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 10px 0; min-height: 4.5em; }
+.pv-step-title { margin: 0 0 4px; font-size: 1rem; }
+.pv-step-text { margin: 0; color: var(--ink-2); }
+.pv-wipe { position: relative; line-height: 0; touch-action: none; cursor: ew-resize; user-select: none; max-width: 520px; margin: 10px auto; }
+.pv-wipe-top { position: absolute; inset: 0; }
+.pv-wipe-handle { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
+.pv-wipe-handle::after { content: "⇆"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px;
+  border-radius: 50%; background: #fff; color: #222; font: 700 18px/34px var(--font); text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.pv-wipe-label { position: absolute; top: 10px; font: 600 13px/1 var(--font); color: #fff; background: rgba(0,0,0,.6); padding: 5px 8px; border-radius: 6px; }
+.pv-wipe-label.l { left: 10px; } .pv-wipe-label.r { right: 10px; }
+.pv-error { color: var(--critical); }
+.pv-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .pv-split { grid-template-columns: 1fr; } }
+.pv-split .pv-panels { margin-top: 0; }

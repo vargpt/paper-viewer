@@ -1,0 +1,17 @@
+<section class="chapter" id="wipe">
+  <h2>What the system does</h2>
+  <p class="tldr"><strong>In one sentence:</strong> you photograph someone through a window, the glass lays a faint picture of whatever is behind you over the photo, and this system peels that picture off.</p>
+
+  <div class="widget">
+    <span class="badge paper">From the paper &middot; Figure 1</span>
+    <h3>Try it: wipe the reflection away</h3>
+    <p class="how">Drag the handle across the photo.</p>
+    <div id="wipe-demo"></div>
+    <p class="notice"><strong>What to notice:</strong> the green field and trees are not in the room. They are the lawn behind the photographer, reflected in the window glass. The cleaned photo keeps the woman, the bike and the sofa, and the system returns the field as a separate layer.</p>
+  </div>
+  <script>
+    PV.compare('wipe-demo', { left: 'figures/fig1-captured.jpg', right: 'figures/fig1-clean.jpg', value: 0.5,
+      labels: ['Captured through glass', 'Reflection removed'], sliderLabel: 'Wipe',
+      alt: 'The paper\'s Figure 1 photo through a window, before and after reflection removal' });
+  </script>
+</section>

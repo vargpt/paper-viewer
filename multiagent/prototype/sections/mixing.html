@@ -1,0 +1,51 @@
+<section class="chapter" id="mixing">
+  <h2>Why the fake reflections have to be mixed as light</h2>
+  <p class="tldr"><strong>In one sentence:</strong> glass adds light, so a reflection floods the dark parts of a photo and barely shows on the bright parts, and only mixing in RAW gets that right.</p>
+
+  <div class="widget">
+    <span class="badge toy">Toy example &middot; built from the paper's Figure 1</span>
+    <h3>Try it: make your own fake reflection</h3>
+    <p class="how">Drag the slider to make the reflected lawn stronger or weaker. Watch spots A and B.</p>
+    <div id="mixing-lab"></div>
+    <p class="notice" id="mixing-notice"><strong>What to notice:</strong> adding as light, the lawn floods the dark dress (A) but barely touches the white fur (B), just like the real photo on the right. The finished-photo blend puts the lawn over everything equally and greys out the fur.</p>
+  </div>
+
+  <details class="deeper"><summary>How this toy works</summary><div>
+    <p>The two source pictures are the paper's own outputs for this photo: the clean layer and the reflection layer it separated (Figure 1). Left, they are converted back to approximate linear light and added: \(m = t + k\,r\), with \(k\) set by the slider in stops (each stop doubles or halves the light). Right, the finished images are averaged, \(m = (1-a)\,t + a\,r\), as a simple stand-in for how earlier methods blended 8-bit photos. The real pipeline does the adding in camera XYZ, before white balance, and also models the glass (angle, thickness, blur); see the paper, Sec. 3.</p>
+  </div></details>
+  <script>
+    (() => {
+      const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+      const panels = [
+        { title: 'Added as light (in RAW)', alt: 'Clean photo plus the reflected lawn, added in linear light',
+          pixel: (s, p, i) => { const k = 2 ** p.stops; return [0, 1, 2].map((c) => s.t.lin[i + c] + k * s.r.lin[i + c]); } },
+        { title: 'Blended finished photos', display: true, alt: 'Clean photo and the reflected lawn averaged as finished images',
+          pixel: (s, p, i) => { const k = 2 ** p.stops, a = k / (1 + k); return [0, 1, 2].map((c) => (1 - a) * s.t.disp[i + c] + a * s.r.disp[i + c]); } },
+        { title: 'Real photo, through glass', display: true, alt: 'The photo the camera actually captured through the window',
+          pixel: (s, p, i) => [0, 1, 2].map((c) => s.m.disp[i + c]) },
+      ];
+      let clean = null;
+      const lab = PV.imageLab('mixing-lab', {
+        images: { t: 'figures/fig1-clean.jpg', r: 'figures/fig1-reflection.jpg', m: 'figures/fig1-captured.jpg' }, width: 480,
+        controls: [{ id: 'stops', label: 'Reflection strength', min: -4, max: 1, step: 0.25, value: 0,
+          format: (v) => (v === 0 ? 'as captured' : (v > 0 ? '+' : '') + v + ' stops') }],
+        panels,
+        probes: [{ x: 0.42, y: 0.5, label: 'A' }, { x: 0.86, y: 0.93, label: 'B' }],
+        readout: (k, probe, rgb) => {
+          if (!clean) return '';
+          const base = clean[probe.label], d = Math.abs(lum(rgb) - base);
+          const meter = PV.h('span', { class: 'pv-meter' }, PV.h('i', { style: `width:${Math.min(100, d * 250)}%` }));
+          const word = d < 0.04 ? 'barely changed' : d < 0.12 ? 'some reflection' : 'strong reflection';
+          return PV.h('span', {}, (probe.label === 'A' ? 'dark dress' : 'white fur'), meter, word);
+        },
+      });
+      // brightness of the clean photo at the probes, to measure how much each mixture changed them
+      lab.ready.then(() => PV.loadImages({ t: 'figures/fig1-clean.jpg' }, 480)).then((s) => {
+        const at = (x, y) => { const w = s.t.w, i = (Math.round(y * (s.t.h - 1)) * w + Math.round(x * (w - 1))) * 3;
+          return lum([s.t.disp[i], s.t.disp[i + 1], s.t.disp[i + 2]]); };
+        clean = { A: at(0.42, 0.5), B: at(0.86, 0.93) };
+        lab.set({});
+      });
+    })();
+  </script>
+</section>

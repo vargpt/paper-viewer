@@ -38,7 +38,8 @@ from dotenv import load_dotenv
 import prompts as P
 from agents import Team, UsageLimit, use_auth
 from browser import Browser
-from page import assemble, fill, inline_images, page_text, render_glossary, render_hero, section_texts, static_check
+from page import (assemble, concept_check, fill, inline_images, main_words, page_text, render_glossary, render_hero, section_texts,
+                  static_check)
 from paper import Paper, load_paper
 from tools import expert_tools
 
@@ -48,6 +49,7 @@ DEFAULT_MODEL = {"openrouter": "anthropic/claude-opus-5.5", "subscription": "cla
 LOOK_TOOLS = ["Read", "Glob", "Grep"]
 EDIT_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep"]
 HERO_FIELDS = list(P.HERO["properties"])
+MAX_PLAYS = 12  # widgets operated per page check
 READER_MODEL = {"openrouter": "anthropic/claude-sonnet-5.5", "subscription": "claude-sonnet-5-5", "api-key": "claude-sonnet-5-5"}
 DEFAULT_READERS = ["kid", "teen", "professor", "senior"]
 
@@ -57,10 +59,11 @@ class Config:
     model: str = DEFAULT_MODEL["openrouter"]
     reader_model: str | None = None
     effort: str = "high"
+    expert_effort: str = "medium"  # the experts' build, revise, fix and peer-review sessions
     rounds: int = 1
     readers: list[str] = field(default_factory=lambda: list(DEFAULT_READERS))
     max_experts: int = 3
-    max_sections: int = 8
+    max_sections: int = 5
     peer_review: bool = True
     parallel: int = 4
     auth: str = "openrouter"
@@ -152,8 +155,11 @@ def section_files(ws: Path, plan: dict, expert: dict) -> list[Path]:
 
 def outline(plan: dict) -> str:
     names = {e["id"]: e["name"] for e in plan["experts"]}
-    return "\n".join(f"{i}. `{s['id']}`: {s['title']} (by {names[s['owner']]}). {s['goal']}"
-                     for i, s in enumerate(plan["sections"], 1))
+    story = plan.get("story") or {}
+    head = [f"The point of the page: {story['point']}"] if story.get("point") else []
+    return "\n".join(head + [f"{i}. `{s['id']}`: {s['title']} (by {names[s['owner']]}). {s['goal']}"
+                              + (f" Not here: {s['avoid']}" if s.get("avoid") else "")
+                              for i, s in enumerate(plan["sections"], 1)])
 
 
 def assignment(plan: dict, expert: dict, paper: Paper) -> str:
@@ -161,8 +167,16 @@ def assignment(plan: dict, expert: dict, paper: Paper) -> str:
     parts = []
     for s in owned(plan, expert):
         lines = [f"### `{s['id']}`: {s['title']}", f"Goal: {s['goal']}", "Key points:", *[f"- {k}" for k in s["key_points"]],
-                 f"Where in the paper: {s['paper_refs']}", "Visual ideas (suggestions; do better if you can):",
-                 *[f"- {v}" for v in s["visuals"]]]
+                 *([f"Don't repeat or cover (another section does): {s['avoid']}"] if s.get("avoid") else []),
+                 f"Where in the paper: {s['paper_refs']}",
+                 f"Length: at most {P.SECTION_WORDS} words of main text, outside details blocks."]
+        if s.get("concepts"):
+            lines.append("Concepts, each with its own visual (mark its container data-concept=\"<id>\"; you may build a "
+                         "better visual for a concept than the one planned):")
+            lines += [f"- `{c['id']}`: {c['concept']} Visual: {c['visual']}. The reader: {c['interaction']} Default state: "
+                      f"{c['default']} Built on: {c['built_on']}" for c in s["concepts"]]
+        else:  # plans written before concepts existed
+            lines += ["Visual ideas (suggestions; do better if you can):", *[f"- {v}" for v in s.get("visuals", [])]]
         if s["figures"]:
             lines += ["Paper figures you could use:", *[f"- {figures[f]['file']}: {figures[f]['caption'][:240]}" for f in s["figures"]]]
         lines.append(f"Write it to: sections/{s['id']}.html")
@@ -227,6 +241,11 @@ def normalize_plan(plan: dict, paper: Paper, cfg: Config) -> dict:
             load = {e["id"]: sum(x["owner"] == e["id"] for x in plan["sections"]) for e in experts}
             s["owner"] = min(load, key=load.get)
         s["figures"] = [f for f in s["figures"] if f in known_figures]
+    concept_ids = set()
+    for s in plan["sections"]:
+        s["concepts"] = [dict(c) for c in s.get("concepts") or []]
+        for c in s["concepts"]:
+            c["id"] = _slug(c["id"] or c["concept"], concept_ids)
     plan["experts"] = [e for e in experts if any(s["owner"] == e["id"] for s in plan["sections"])]
     return plan
 
@@ -238,13 +257,16 @@ async def plan_page(team: Team, paper: Paper, cfg: Config) -> dict:
     look = (" Page images are in pages/ and figure crops in figures/: look at the important figures (Read the image"
             " files)." if paper.kind == "pdf" else "")
     prompt = fill(P.PLAN_PROMPT, look=look, min_experts=str(min(3, cfg.max_experts)), max_experts=str(cfg.max_experts),
-                  min_sections=str(min(5, cfg.max_sections)), max_sections=str(cfg.max_sections), figures=figure_list(paper))
+                  min_sections=str(min(3, cfg.max_sections)), max_sections=str(cfg.max_sections), figures=figure_list(paper),
+                  words=str(P.SECTION_WORDS), page_words=str(P.PAGE_WORDS))
     run = await team.run("lead-plan", prompt, system=lead_system(paper), tools=LOOK_TOOLS if paper.kind == "pdf" else [],
                          schema=P.PLAN_SCHEMA, max_turns=40)
     plan = normalize_plan(run.data, paper, cfg)
     save_plan(team.ws, plan)
     for e in plan["experts"]:
         team.say("lead-plan", f"expert: {e['name']} -> {', '.join(s['id'] for s in owned(plan, e))}")
+    team.say("lead-plan", f"{sum(len(s.get('concepts') or []) for s in plan['sections'])} concepts, each with a visual: "
+             + ", ".join(f"{c['id']} ({c['visual'][:30]})" for s in plan["sections"] for c in s.get("concepts") or []))
     return plan
 
 
@@ -261,7 +283,8 @@ async def build(team: Team, browser: Browser, paper: Paper, plan: dict, cfg: Con
         for attempt in range(2):
             run = await team.run(name, prompt, system=expert_system(paper, team.ws), tools=EDIT_TOOLS,
                                  writable=section_files(team.ws, plan, expert), mcp=tools_for(team, plan, paper, browser, cfg),
-                                 schema=P.SUMMARY_SCHEMA, need_data=False, max_turns=cfg.expert_turns)
+                                 schema=P.SUMMARY_SCHEMA, need_data=False, effort=cfg.expert_effort,
+                                 max_turns=cfg.expert_turns)
             missing = [f.name for f in section_files(team.ws, plan, expert) if not f.exists()]
             if not missing:
                 state.mark(key, run.data)
@@ -277,18 +300,23 @@ async def build(team: Team, browser: Browser, paper: Paper, plan: dict, cfg: Con
 async def technical_qa(ws: Path, plan: dict, browser: Browser, draft: Path, shots: Path | None) -> dict:
     """Static checks of every section, then the assembled page in a browser (desktop and phone)."""
     problems: dict[str, list[str]] = {}
+    words: dict[str, int] = {}
     for s in plan["sections"]:
         f = ws / "sections" / f"{s['id']}.html"
-        found = static_check(f.read_text(), s["id"], ws) if f.exists() else ["The section file is missing."]
+        found = static_check(f.read_text(), s["id"], ws) + concept_check(f.read_text(), s) if f.exists() else ["The section file is missing."]
         if found:
             problems[s["id"]] = found
-    rendered = await browser.render(draft, shots=shots, prefix="page")
-    screens = []
+        words[s["id"]] = main_words(f.read_text()) if f.exists() else 0
+    # operate every widget too (dead widgets are problems); readers see the widgets after being operated
+    rendered = await browser.render(draft, shots=shots or ws / "screenshots" / "qa", prefix="page",
+                                    max_shots=16 if shots else 0, max_plays=MAX_PLAYS)
+    screens, plays = [], []
     if rendered:
         for where, found in rendered.problems.items():
             problems.setdefault(where, []).extend(found)
         screens = [str(p.relative_to(ws)) for p in rendered.shots]
-    return {"problems": problems, "screens": screens}
+        plays = [[str(p.relative_to(ws)), what] for p, what in rendered.plays] if shots else []
+    return {"problems": problems, "screens": screens, "plays": plays, "words": words}
 
 
 def audit_parts(ws: Path, plan: dict, page_html: str) -> list[tuple[str, str, str, str]]:
@@ -311,22 +339,25 @@ async def audit(team: Team, paper: Paper, part: tuple, tag: str) -> dict:
     return run.data
 
 
-async def read_page(team: Team, plan: dict, persona: P.Persona, page: str, shots: list[str], cfg: Config, r: int) -> dict:
+async def read_page(team: Team, plan: dict, persona: P.Persona, page: str, shots: list[str], played: str, cfg: Config,
+                    r: int) -> dict:
     p = plan["paper"]
     description = fill(persona.description, field=p.get("field") or "this research field",
                        practitioner=p.get("practitioner") or "professional who might use this research")
-    how = fill(P.READER_WITH_SCREENS, shots=", ".join(shots)) if shots else P.READER_TEXT_ONLY
+    how = fill(P.READER_WITH_SCREENS, shots=", ".join(shots),
+               played=fill(P.READER_PLAYED, played=played) if played else "") if shots else P.READER_TEXT_ONLY
     prompt = fill(P.READER_PROMPT, who=persona.who, short=persona.short, description=description, how=how, page=page)
     run = await team.run(f"reader-{persona.id}-r{r}", prompt, system=P.READER_SYSTEM, tools=["Read"] if shots else [],
                          schema=P.READER_SCHEMA, model=cfg.reader_model, max_turns=40)
     return run.data
 
 
-async def peer_review(team: Team, paper: Paper, plan: dict, expert: dict, page: str, shots: list[str], r: int) -> dict:
+async def peer_review(team: Team, paper: Paper, plan: dict, expert: dict, page: str, shots: list[str], cfg: Config,
+                      r: int) -> dict:
     prompt = fill(P.PEER_PROMPT, name=expert["name"], expertise=expert["expertise"], own=own_list(plan, expert), round=str(r),
                   shots=f", and these screenshots of the page: {', '.join(shots)}" if shots else "", page=page)
     run = await team.run(f"peer-{expert['id']}-r{r}", prompt, system=expert_system(paper, team.ws), tools=LOOK_TOOLS,
-                         schema=P.PEER_SCHEMA, max_turns=30)
+                         schema=P.PEER_SCHEMA, effort=cfg.expert_effort, max_turns=30)
     return run.data
 
 
@@ -335,17 +366,19 @@ async def review(team: Team, browser: Browser, paper: Paper, plan: dict, cfg: Co
     page_html = draft.read_text()
     text = page_text(page_html)
     qa = await cached(rdir / "qa.json", partial(technical_qa, team.ws, plan, browser, draft, rdir / "screens"))
-    shots = [str(team.ws / s) for s in qa["screens"]]
+    plays = qa.get("plays", [])
+    shots = [str(team.ws / s) for s in qa["screens"]] + [str(team.ws / p) for p, _ in plays]
+    played = "; ".join(f"{Path(p).name} shows {what}" for p, what in plays)
     jobs = []  # (kind, key, job)
     for persona in cfg.personas:
         jobs.append(("readers", f"{persona.id}: {persona.who}", cached(
-            rdir / f"reader-{persona.id}.json", partial(read_page, team, plan, persona, text, shots, cfg, r))))
+            rdir / f"reader-{persona.id}.json", partial(read_page, team, plan, persona, text, shots, played, cfg, r))))
     for part in audit_parts(team.ws, plan, page_html):
         jobs.append(("audits", part[0], cached(rdir / f"audit-{part[0]}.json", partial(audit, team, paper, part, f"r{r}"))))
     if cfg.peer_review and len(plan["experts"]) > 1:
         for e in plan["experts"]:
             jobs.append(("peers", e["name"], cached(
-                rdir / f"peer-{e['id']}.json", partial(peer_review, team, paper, plan, e, text, shots, r))))
+                rdir / f"peer-{e['id']}.json", partial(peer_review, team, paper, plan, e, text, shots, cfg, r))))
     results = await run_all([guarded(team, f"{kind}:{key}", job) for kind, key, job in jobs])
     feedback = {"page": text, "qa": qa, "readers": {}, "audits": {}, "peers": {}}
     for (kind, key, _), data in zip(jobs, results):
@@ -365,7 +398,8 @@ def minors(audits: dict) -> int:
 def scores(feedback: dict) -> dict:
     return {"readers": {k.split(":")[0]: v.get("score") for k, v in feedback["readers"].items()},
             "fact_check": {"major": majors(feedback["audits"]), "minor": minors(feedback["audits"])},
-            "browser_problems": sum(len(v) for v in feedback["qa"]["problems"].values())}
+            "browser_problems": sum(len(v) for v in feedback["qa"]["problems"].values()),
+            "words": sum((feedback["qa"].get("words") or {}).values())}
 
 
 # ---------------------------------------------------------------- 4. edit
@@ -380,12 +414,22 @@ def fallback_edit(feedback: dict) -> dict:
             "tickets": tickets, "hero": {k: "" for k in HERO_FIELDS}, "key_numbers": [], "glossary_add": [], "notes_to_team": ""}
 
 
+def length_report(qa: dict) -> str:
+    words = qa.get("words") or {}
+    if not words:
+        return "(not measured)"
+    lines = [f"- {sid}: {n}" + (" (over budget)" if n > P.SECTION_WORDS else "") for sid, n in words.items()]
+    total = sum(words.values())
+    return "\n".join(lines + [f"- whole page: {total}" + (" (over budget)" if total > P.PAGE_WORDS else "")])
+
+
 async def decide(team: Team, paper: Paper, plan: dict, feedback: dict, cfg: Config, r: int) -> dict:
     async def make():
         prompt = fill(P.EDIT_PROMPT, round=str(r), rounds=str(cfg.rounds), plan=jdump(plan), page=feedback["page"],
                       readers=jdump(feedback["readers"]), audits=jdump(feedback["audits"]),
                       peers=jdump(feedback["peers"]) if feedback["peers"] else "(no peer review this round)",
-                      qa=jdump(feedback["qa"]["problems"]) if feedback["qa"]["problems"] else "(no problems found)")
+                      qa=jdump(feedback["qa"]["problems"]) if feedback["qa"]["problems"] else "(no problems found)",
+                      words=str(P.SECTION_WORDS), page_words=str(P.PAGE_WORDS), length=length_report(feedback["qa"]))
         run = await team.run(f"lead-edit-r{r}", prompt, system=lead_system(paper), tools=LOOK_TOOLS,
                              schema=P.EDIT_SCHEMA, max_turns=30)
         return run.data
@@ -414,6 +458,8 @@ def feedback_for(ids: set, feedback: dict) -> dict:
         out["readers"] += [{"reader": who, **c} for c in data.get("confusing", []) if c["section_id"] in ids]
         out["readers"] += [{"reader": who, **v} for v in data.get("visuals", []) if v["section_id"] in ids]
         out["readers"] += [{"reader": who, **s} for s in data.get("section_scores", []) if s["section_id"] in ids]
+        out["readers"] += [{"reader": who, "felt_repetitive": c["what"], "section_id": c["section_id"]}
+                           for c in data.get("repetitive", []) if c["section_id"] in ids]
     for sid in sorted(ids):
         out["fact_check"] += [{"section_id": sid, **i} for i in feedback["audits"].get(sid, {}).get("issues", [])]
         out["browser"] += [f"[{sid}] {p}" for p in feedback["qa"]["problems"].get(sid, [])]
@@ -450,7 +496,8 @@ async def revise(team: Team, browser: Browser, paper: Paper, plan: dict, edit: d
                       feedback=jdump(mine), notes=notes, page=feedback["page"])
         run = await team.run(f"expert-{expert['id']}-revise-r{r}", prompt, system=expert_system(paper, team.ws), tools=EDIT_TOOLS,
                              writable=section_files(team.ws, plan, expert), mcp=tools_for(team, plan, paper, browser, cfg),
-                             schema=P.SUMMARY_SCHEMA, need_data=False, max_turns=cfg.expert_turns)
+                             schema=P.SUMMARY_SCHEMA, need_data=False, effort=cfg.expert_effort,
+                                 max_turns=cfg.expert_turns)
         state.mark(key, run.data)
 
     await run_all([guarded(team, f"expert-{e['id']}-revise-r{r}", one(e)) for e in plan["experts"]])
@@ -495,7 +542,7 @@ async def verify(team: Team, browser: Browser, paper: Paper, plan: dict, cfg: Co
                                   own=own_list(plan, expert), issues=jdump(issues)),
                              system=expert_system(paper, team.ws), tools=EDIT_TOOLS, writable=section_files(team.ws, plan, expert),
                              mcp=tools_for(team, plan, paper, browser, cfg), schema=P.SUMMARY_SCHEMA, need_data=False,
-                             max_turns=40)
+                             effort=cfg.expert_effort, max_turns=40)
         state.mark(key, run.data)
 
     jobs = [guarded(team, f"expert-{e['id']}-fix", fix(e)) for e in plan["experts"]]
@@ -554,6 +601,7 @@ async def make_page(src: Path, ws: Path, out_html: Path, out_json: Path, cfg: Co
         "model": cfg.model,
         "reader_model": cfg.reader_model or cfg.model,
         "effort": cfg.effort,
+        "expert_effort": cfg.expert_effort,
         "auth": cfg.auth,
         "paper": src.name,
         "rounds": rounds,
@@ -584,7 +632,8 @@ async def run_one(src: Path, stem: str, out: Path, work: Path, cfg: Config, fres
           f"{meta['agent_sessions']} agent sessions (API-equivalent cost ${meta['cost_usd_api_equivalent']})")
     for h in meta["history"]:
         readers = f"readers {h['readers']}, " if "readers" in h else ""
-        print(f"  round {h['round']}: {readers}fact-check {h['fact_check']}, browser problems {h['browser_problems']}")
+        print(f"  round {h['round']}: {readers}fact-check {h['fact_check']}, browser problems {h['browser_problems']}"
+              + (f", {h['words']} words of main text" if h.get("words") else ""))
     return meta
 
 
@@ -597,7 +646,10 @@ def add_options(parser: argparse.ArgumentParser) -> None:
                         "OpenRouter, claude-opus-5-5 otherwise)")
     parser.add_argument("--reader-model", help="model for the simulated readers (default Sonnet 5.5: anthropic/claude-sonnet-5.5 "
                         "on OpenRouter, claude-sonnet-5-5 otherwise)")
-    parser.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
+    efforts = ["low", "medium", "high", "xhigh", "max"]
+    parser.add_argument("--effort", default="high", choices=efforts, help="editor, fact-checker and readers (default high)")
+    parser.add_argument("--expert-effort", default="medium", choices=efforts,
+                        help="the experts: writing, revising, fixing and peer review (default medium)")
     parser.add_argument("--rounds", type=int, default=1, help="review-and-revise rounds (default 1)")
     parser.add_argument("--readers", default="default", help=f"comma-separated simulated readers from: {ids}; or 'all' "
                         f"(default: {','.join(DEFAULT_READERS)})")
@@ -614,7 +666,8 @@ def add_options(parser: argparse.ArgumentParser) -> None:
 
 
 def config_from(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Config:
-    cfg = Config(model=args.model or DEFAULT_MODEL[args.auth], reader_model=args.reader_model or READER_MODEL[args.auth], effort=args.effort, rounds=args.rounds,
+    cfg = Config(model=args.model or DEFAULT_MODEL[args.auth], reader_model=args.reader_model or READER_MODEL[args.auth], effort=args.effort,
+                 expert_effort=args.expert_effort, rounds=args.rounds,
                  max_experts=args.max_experts, peer_review=not args.no_peer_review, parallel=args.parallel, auth=args.auth)
     if args.readers == "all":
         cfg.readers = [p.id for p in P.PERSONAS]
@@ -626,7 +679,7 @@ def config_from(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Co
     if args.quick:
         cfg.rounds = min(cfg.rounds, 1)
         cfg.max_experts = min(cfg.max_experts, 3)
-        cfg.max_sections = 6
+        cfg.max_sections = 4
         cfg.peer_review = False
         if args.readers == "default":
             cfg.readers = ["kid", "grad", "professor"]
@@ -634,6 +687,10 @@ def config_from(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Co
 
 
 def run_stem(src: Path, model: str, i: int) -> str:
+    # one name per model whatever the auth, so a run started on OpenRouter can resume on a subscription:
+    # claude-opus-5-5 is named like OpenRouter's anthropic/claude-opus-5.5
+    if "/" not in model:
+        model = "anthropic/" + re.sub(r"-(\d+)-(\d+)$", r"-\1.\2", model)
     return f"{src.stem}__{model.replace('/', '_')}__run{i}"
 
 

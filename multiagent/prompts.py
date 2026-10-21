@@ -7,6 +7,9 @@ from dataclasses import dataclass
 
 # ---------------------------------------------------------------- shared style guide
 
+SECTION_WORDS = 400  # main text per section, outside <details>; check_section and the editor see the counts
+PAGE_WORDS = 1800    # main text of all sections together
+
 STYLE_GUIDE = r"""
 # How our pages explain research
 
@@ -14,16 +17,34 @@ STYLE_GUIDE = r"""
 Everyone, on the same page: a curious 8-year-old reading with a parent, a 15-year-old student, a university graduate
 from another field, a busy professional, a professor in this field, and a 70-year-old who doesn't know any AI jargon.
 We serve all of them with layers instead of compromises:
-1. Every section opens with a one-sentence takeaway in plain words (`.tldr`).
-2. Every section has a kid-level layer (`.eli5`): a short everyday analogy or story, short sentences, no jargon,
-   concrete things (cookies, maps, LEGO, music, sports...).
+1. Every section opens with a one-sentence takeaway in plain words (`.tldr`). The text after it develops the idea;
+   it never restates the takeaway in other words.
+2. A kid-level layer (`.eli5`: a short everyday analogy, short sentences, no jargon, concrete things like cookies,
+   maps, LEGO, music, sports) goes where a hard idea first appears, not in every section: one or two on the page.
+   One good analogy, introduced once and reused, beats a new analogy per section.
 3. The main text is plain language for a smart non-expert: short paragraphs (2-4 sentences), active voice, one idea
    per paragraph, about a 7th-grade reading level, and every technical term explained the first time it appears
    (wrap it in `.term` with a plain definition).
 4. Depth (equations, algorithm details, settings, proofs, comparisons with prior work) goes inside collapsible
-   `details.deeper` blocks, so experts get rigor without drowning beginners. Inside them, be precise and technical.
+   `details.deeper` blocks, so experts get rigor without drowning beginners. Inside them, be precise, technical and
+   brief.
 5. Visuals carry the explanation: someone who only looks at the pictures and plays with the demos should still get
-   the main idea.
+   the main idea. Text is the caption to the visuals, not the other way around.
+
+## Teach the point, don't retell the paper
+The page is not a summary of the paper section by section. It is a short lesson that makes ONE point land: what
+problem the work solves and the idea that solves it, then just enough of how it works and what the evidence shows to
+believe it.
+- Get to the heart fast. The header already says what the work does; the first section shows the problem concretely
+  (an example, a picture, a before/after) and reaches the key idea within the first screen or two. No long warm-up,
+  no history of the field, no generic background a reader doesn't need for THIS point.
+- Background only on demand: explain a prerequisite right where the story needs it, in a sentence or a small
+  aside, not in its own chapter.
+- Every section is one step of the story and adds something the reader doesn't have yet. If a paragraph, analogy,
+  figure or widget repeats what an earlier section already made clear, cut it or refer back ("the dial from above").
+- Leave things out. Ablations, implementation settings, every metric, related work and minor results belong in a
+  "Go deeper" block or nowhere. Pick the one or two results that prove the point.
+- End when the point is made: the limitations that matter, in a few sentences, not a catalogue.
 
 ## Faithfulness (non-negotiable)
 - The paper is the only source of facts about the work. Every number, dataset, method detail, result and
@@ -43,20 +64,71 @@ We serve all of them with layers instead of compromises:
 - Correct general background knowledge (what an MRI scan is, what a pixel is) is fine, but don't attribute it to
   the paper.
 
-## Visual explanations
-- Every section needs at least one visual, chosen for its idea: a paper figure with a plain-language caption, an
-  interactive toy (sliders, toggles, step-through, drag), a diagram (inline SVG), a chart of the paper's numbers, a
-  before/after comparison, or a step-by-step process.
-- Interactive widgets are where readers learn by doing ("explorable explanations"): let the reader change the one
-  thing that matters and immediately see the consequence. Examples: a slider that changes a parameter of a toy
-  model and redraws the outcome; a step-through of an algorithm with Back/Next buttons; hovering a word to see what
-  it attends to; dragging a point to see an angle or a distance change; toggling between the paper's methods to
-  compare their scores.
-- Each widget has: a badge (toy example / from the paper), a title, a one-line instruction ("Drag the slider
-  to..."), a default state that already shows something meaningful (many people never touch it, and a screenshot
-  must make sense), and a "What to notice" line stating the takeaway.
-- One excellent, focused visual beats several mediocre ones. Make it polished: aligned, uncluttered, labels at
-  least 13px, generous spacing, no overlapping text.
+## Visuals first: every concept gets a picture the reader can play with
+A webpage's advantage over a PDF is that the reader can poke at the idea. So the page is a sequence of explorable
+visuals with short text around them, not an article with pictures. Every concept the plan gives your section has
+its own visual (a widget, diagram or figure), and the text explains what to do with it and what it shows. Mark each
+concept's visual with `data-concept="<concept id>"` on its container; check_section reports concepts without one.
+
+Pick the visual by what the concept is (the recipe):
+- A process or pipeline (camera processing, a training loop, an algorithm's steps): `PV.stepper` over ONE shared
+  picture that changes at every step, ideally the paper's own example passing through the pipeline.
+- An operation on images or signals (mixing, filtering, editing, noise, masks, attention): `PV.imageLab` on the
+  paper's real images (get the original panels with extract_images), with the one parameter that matters on a
+  slider, side by side with the paper's own result.
+- Before/after, ours vs theirs, input vs output: `PV.compare` (a wipe) on the paper's images.
+- Geometry or a space (vectors, angles, latent spaces, distances, interpolation paths, decision boundaries): an
+  inline SVG diagram with points the reader drags (`PV.svg` + `PV.drag`), recomputing and redrawing as they move.
+- A parameter, a trade-off or a formula: sliders for its inputs driving a chart or the computed result (`PV.plot`),
+  so the reader sees what each term does; mark the paper's own setting.
+- An architecture: a block diagram the reader steps through or clicks, each block showing what flows through it
+  (an example, its shape, what it adds).
+- Results: a chart of the paper's numbers with toggles (method, dataset, metric); the paper's qualitative figures as
+  a method picker or a wipe.
+Rules for every visual:
+- Build on the paper's real material whenever the concept is about something the paper shows (photos, outputs,
+  examples, diagrams): extract_images gives the original image panels of a page; crop_figure cuts any region.
+  Draw from scratch only when the paper has nothing to show, and then keep it clean and simple (shapes, arrows and
+  labels, not a fake photographic scene).
+- The reader changes the one thing that matters and immediately sees the consequence. Every control must visibly
+  change something meaningful: check_section operates each widget and reports ones that don't change.
+- Each widget has: a badge (`badge toy` for toy examples, `badge paper` for the paper's material; a toy built on the
+  paper's images says so), a title, a one-line instruction ("Drag the slider to..."), a default state that already
+  shows the point (many people never touch it, and a screenshot must make sense), and a "What to notice" line.
+- Polished: aligned, uncluttered, labels at least 13px, generous spacing, no overlapping text, images large enough to
+  see the effect (at least ~300px wide on desktop). Put a widget's explanation beside it (`.pv-split`) when that
+  keeps it on one screen.
+
+### The PV toolkit (already on the page; prefer it to hand-written canvas or DOM code)
+```js
+// Image lab: panels computed pixel by pixel from the paper's images, redrawn when a control changes.
+const lab = PV.imageLab('SECTION_ID-lab', {            // the id of an empty <div> in your widget
+  images: { t: 'figures/p1-9.jpg', r: 'figures/p1-10.jpg' },   // same-size images work best
+  width: 480,                                          // working width in pixels (height follows the first image)
+  controls: [{ id: 'k', label: 'Reflection strength', min: -4, max: 1, step: 0.25, value: 0, format: (v) => v + ' stops' },
+             { id: 'mode', label: 'Mix', options: [['raw', 'As light'], ['jpg', 'As finished photos']] }],
+  panels: [{ title: 'Added as light', alt: 'what it shows',
+             // s.<name>.lin[i..i+2] = linear-light RGB of the pixel, s.<name>.disp = display (sRGB) RGB, 0..1;
+             // p = the control values. Return linear RGB (or display RGB with display: true).
+             pixel: (s, p, i) => [0, 1, 2].map((c) => s.t.lin[i + c] + 2 ** p.k * s.r.lin[i + c]),
+             inset: { x: 0.6, y: 0.2, size: 16, zoom: 9 } }],   // optional pixelated close-up (or a function of p)
+  probes: [{ x: 0.42, y: 0.5, label: 'A' }],           // marked spots, fractions of the image
+  readout: (panel, probe, rgb, p) => 'brightness ' + rgb[1].toFixed(2),   // text or element under each panel
+  onUpdate: (p) => {},                                 // after every redraw
+});                                                    // lab.set({k: 1}) redraws; lab.ready is a Promise
+// Stepper: pills + Back/Next + the step's text; onStep(i) updates your picture.
+PV.stepper('SECTION_ID-steps', { steps: [{ label: 'Demosaic', n: 2, title: 'Step 2: demosaic', text: 'HTML', mark: 'MIX HERE' }],
+  onStep: (i, step) => lab.set({ step: i }) });
+// Wipe between two images (paths or canvases).
+PV.compare('SECTION_ID-wipe', { left: 'figures/a.jpg', right: 'figures/b.jpg', labels: ['Captured', 'Cleaned'], value: 0.5 });
+// SVG with draggable points: drag(el, (x, y) => {...}, svgRoot) gives SVG coordinates.
+const svg = PV.svg('svg', { viewBox: '0 0 400 300', role: 'img', 'aria-label': '...' });
+const dot = PV.svg('circle', { cx: 200, cy: 150, r: 9, fill: PV.color('c1') }); svg.append(dot);
+PV.drag(dot, (x, y) => { dot.setAttribute('cx', x); dot.setAttribute('cy', y); redraw(); }, svg);
+// Also: PV.plot(id, traces, layout) for Plotly charts, PV.color('c1'..'c8'), PV.toLinear / PV.toDisplay, PV.h(tag, attrs, ...kids)
+```
+Layout: `<div class="pv-split"><div id="SECTION_ID-steps"></div><div id="SECTION_ID-lab"></div></div>` puts two
+parts side by side on desktop and stacks them on phones.
 - Charts: pick the right form (a single headline number is a stat, not a chart); exactly one y-axis (never two
   scales on one chart); categorical colors in the fixed palette order (`PV.palette()`), and a color always follows
   the same entity; thin marks, light gridlines; a legend when there are 2+ series plus a few direct labels (never a
@@ -141,9 +213,11 @@ We serve all of them with layers instead of compromises:
 - Paper figures: `<img src="figures/FILE.png" alt="...">` (see figures.json; crop_figure makes new crops).
 - Must work on a 390px-wide phone: no horizontal overflow (max-width: 100%, flex-wrap, responsive SVG; wide tables go
   in `.table-wrap`).
-- Size: a section should be readable in about 2-4 minutes (roughly 300-700 words of main text, plus visuals and
-  details) and stay under about 40 KB of HTML including script.
-"""
+- Size: the whole page should be read in about 8-10 minutes. A section has at most {{words}} words of main text
+  (outside `details` blocks; check_section counts them), at most two `details` blocks of a few short paragraphs
+  each, and stays under about 50 KB of HTML including script (the PV toolkit keeps widgets short). A quiz is
+  optional: at most one on the page.
+""".replace("{{words}}", str(SECTION_WORDS))
 
 # ---------------------------------------------------------------- lead editor
 
@@ -166,22 +240,35 @@ PLAN_PROMPT = """Plan the explainer page for the paper in your system prompt.
 2. Work out: the problem and why anyone should care; the key idea (the "aha"); how the method works; what the
    experiments show, with exact numbers; the limitations. Note which concepts a newcomer must grasp first.
 3. Choose the expert team: {{min_experts}} to {{max_experts}} experts. Make each one specific to THIS paper
-   ("expert in contrastive learning for medical images", not "ML expert"). Together they must cover: the background
-   needed to see why the problem matters; the core method (its math or algorithm, turned into interactive toy
+   ("expert in contrastive learning for medical images", not "ML expert"). Together they must cover: the problem and
+   why it matters (with only the background this point needs); the core method (its math or algorithm, turned into interactive toy
    models); the evidence (experiments and honest data visualization); and whatever else this paper needs (clinical
    or ethical stakes for medical work, proof intuition for theory, a storyteller for the hook and analogies...).
    Fewer, stronger experts beat many. Give each expert a brief: what they own, the angle to take, pitfalls to avoid.
-4. Design the page as a story of {{min_sections}} to {{max_sections}} sections, for example: why it matters (the hook)
-   -> background -> the key idea -> how it works (1-3 sections) -> does it work? (results) -> limitations and open
-   questions. Each section has exactly one owner; every expert owns at least one section; spread the work evenly.
-   For each section give its goal, the key points (with exact numbers where relevant), where the material is in
-   the paper, and concrete visual ideas: which paper figure to show, or which toy example or interactive to build.
-   The key idea and the method deserve interactive toy examples.
-5. Write the hero: a plain-language headline that says what the work does (not the paper's title), a subtitle,
+4. Find the story before you design sections (see "Teach the point, don't retell the paper"). Write the point: the
+   one thing every reader should walk away with, in one plain sentence. Then the beats: the 3-5 steps a reader needs,
+   in order, to get that point and believe it (typically: the problem, made concrete -> the key idea -> how it works,
+   only as deep as needed -> the evidence that it works -> the catch). Don't follow the paper's own outline, and
+   don't give background, related work or every experiment a beat of their own.
+5. Design the page as {{min_sections}} to {{max_sections}} sections, one per beat; fewer is better when the story
+   allows. The first section must reach the key idea quickly. Each section has exactly one owner; every expert owns at
+   least one section; spread the work evenly. For each section give its goal, the key points (with exact numbers
+   where relevant), what it must NOT repeat or cover (because another section does), and where the material is in
+   the paper. Budget: at most {{words}} words of main text per section, {{page_words}} for the whole page.
+6. Design the visuals concept by concept (see "Visuals first" and its recipe). List every concept a reader must
+   grasp to get the point (typically 6-12 for the page: the problem, the key idea, each step of the method that
+   matters, the evidence, the catch) and give each to the section where it belongs, with its visual: which recipe
+   (stepper, image lab, wipe, draggable diagram, slider and chart, architecture walk-through, results chart, paper
+   figure), what the reader does and what they see change, what the default state shows, and what it is built on
+   (which paper images, panels or numbers; for photos, the page to extract_images from). Concepts about images or
+   examples the paper shows are built on the paper's real images, not drawn. The key idea gets the page's
+   centerpiece: its richest, most hands-on widget; later sections reuse it where they can instead of inventing a
+   new toy. A plain paper figure is fine for a concept only when nothing interactive would teach it better.
+7. Write the hero: a plain-language headline that says what the work does (not the paper's title), a subtitle,
    three summaries (kid: 1-2 very short sentences for an 8-year-old; general: 2-3 sentences for any adult; expert:
    2-3 precise sentences), why it matters, and 2-4 key numbers copied exactly from the paper with their source.
-6. Glossary: 8-16 terms a newcomer will meet on the page, each with a one-sentence plain definition.
-7. Team notes: the names and notation everyone must use, the tone, and claims the team must not make.
+8. Glossary: 8-16 terms a newcomer will meet on the page, each with a one-sentence plain definition.
+9. Team notes: the names and notation everyone must use, the tone, and claims the team must not make.
 
 Ids are short, lowercase, with hyphens (e.g. "why-it-matters"). Leave a paper field empty if the paper doesn't state it.
 
@@ -204,17 +291,30 @@ How to decide:
   loses that reader: find where, and fix it.
 - Serve every reader with layers, not compromises. If the child is lost and the professor wants depth, add a clearer
   kid box or visual AND put the depth in a details block.
-- Check coverage against the paper: the problem, key idea, method, main results with numbers, and limitations.
-  Missing key points become tickets for the right section.
-- Keep what works. Don't churn sections readers liked; prefer targeted, high-impact changes. At most 6 tickets per
+- Story and length. Read the page top to bottom as one lesson: does it reach the problem and the key idea within
+  the first screen or two, does every section advance the story point in the plan, and does it end when the point
+  is made? Cut what repeats an earlier section (the same idea explained again, a second analogy for the same thing,
+  a widget that shows the same effect, a recap), background the point doesn't need, and paper detail that doesn't
+  serve the point (move it into a details block or delete it). Sections over the word budget get a "must" ticket
+  saying what to cut. A shorter, clearer page is a better page; cutting is an improvement, not a loss.
+- Check coverage of what the point needs: the problem, the key idea, how it works (as deep as needed), the main
+  results with numbers, and the limitations that matter. Missing key points become tickets for the right section.
+- Visuals are the page. Every visual a reader called "confusing", "broken" or "too small or cluttered", every
+  widget the QA says doesn't change when operated, and every concept without a visual is a "must" ticket to make
+  that visual teach its concept: bigger, clearer, built on the paper's real images, with a control that matters.
+  Fix a weak visual; don't delete it or replace it with text. A concept explained only in prose, where a widget
+  would show it, gets a ticket for a visual (name the recipe). Readers' requests for something to try, play with
+  or see are tickets too.
+- Keep what works. Don't churn sections readers liked; prefer targeted, high-impact changes, and don't fix
+  confusion by adding paragraphs when rewriting or cutting one would do. At most 6 tickets per
   section, each specific and actionable ("define X in plain words where it first appears in paragraph 2", "add a
   toy example in which ...").
 - Coordinate the team: one name per concept, one notation, no duplicated explanations, good hand-offs between
   sections. Technical QA problems are "must" tickets.
 - The hero (headline, three summaries, why it matters, key numbers) and the glossary are yours: rewrite them here if
   the feedback shows a problem (an empty string keeps the current text; an empty key_numbers list keeps the numbers).
-Set done to true only if every reader would understand the page well, nothing factual is wrong, and nothing
-important is left to improve.
+Set done to true only if every reader would understand the page well, nothing factual is wrong, the page is
+within its length budget without repetition, and nothing important is left to improve.
 
 Current plan:
 {{plan}}
@@ -235,6 +335,9 @@ Peer review:
 
 Technical QA:
 {{qa}}
+
+Length (words of main text, outside details blocks; budget {{words}} per section, {{page_words}} for the page):
+{{length}}
 """
 
 HERO_FIX_PROMPT = """The fact-checker compared the page's header and glossary with the paper and found these problems:
@@ -287,14 +390,21 @@ Brief from the lead editor: {{brief}}
 {{assignment}}
 
 ## How to work
-1. Re-read the parts of the paper your sections cover, and look at the relevant figures and page images.
-2. For each section decide the one idea a reader must take away, and the best visual for it. If the paper has no
-   picture of the idea, invent a toy example that makes it click.
-3. Write each section to sections/<id>.html, following the style guide and using the page components.
-4. Run check_section on each section and look at the screenshots. Fix every problem, and anything that looks wrong,
-   cramped, unreadable or empty; check again until it is clean.
+1. Re-read the parts of the paper your sections cover, and look at the relevant figures and page images. Get the
+   paper's real material for your visuals: extract_images for photos and image panels, crop_figure for diagrams.
+2. Build the visuals first, one per concept in your sections (see "Visuals first", the recipe and the PV toolkit),
+   each marked data-concept="<concept id>". Run check_section and look at the screenshots, including the ones taken
+   after it operated your widgets: does the default state show the point, and does operating it teach something?
+   Fix what doesn't, in one batch of edits, then check again.
+3. Then write the text around the visuals: the takeaway, what to do with each visual and what it shows, and only
+   what that beat still needs. Don't re-explain what earlier sections cover (refer back instead), don't add
+   background or paper detail the point doesn't need, and stay within the word budget (check_section reports the
+   count). If it is over, make one decisive cut (rewrite or remove whole sentences and paragraphs), not a series of
+   small trims with a check after each.
+4. Run check_section on each section. Fix every problem, and anything that looks wrong, cramped, unreadable or
+   empty, all in one batch of edits, then check again until it is clean.
 5. Re-read your sections once as a skeptical professor (is every claim in the paper? numbers exact? hedges kept?
-   toy examples labeled?) and once as a 12-year-old (is every term explained? is there something to look at?). Fix.
+   toy examples labeled?) and once as a 12-year-old (is every term explained? is there something to play with?). Fix.
 6. Answer with a short summary: what you built, the visuals, and any concerns for the editor.
 Other experts are writing their sections at the same time; you may read their files, but don't wait for them.
 """
@@ -319,8 +429,11 @@ The current page, so your sections stay consistent with the others (text version
 ## How to work
 1. Read your section file(s). Work through the tickets: every "must" ticket and every fact-check issue has to be
    fixed; do the "should" tickets unless they would make the section worse (then say why in your summary).
-2. Make targeted edits (Edit tool) and keep what works. Rewrite a part only if a ticket asks for it.
-3. Run check_section on every section you changed and look at the screenshots. Fix what's broken; check again.
+2. Make targeted edits (Edit tool) and keep what works. Rewrite a part only if a ticket asks for it. When a ticket
+   asks you to cut, really cut. Don't answer confusion by adding paragraphs: clarify, replace or remove instead, and
+   keep each section within its word budget.
+3. Run check_section on every section you changed and look at the screenshots. Fix what's broken in one batch of
+   edits; check again. If a section is over the word budget, cut it in one decisive pass, not a few words at a time.
 4. Answer with a short summary of what you changed and anything you couldn't do.
 """
 
@@ -339,7 +452,8 @@ The team has assembled draft {{round}} of the page. Review the OTHER experts' se
 expertise:
 - factual errors or misleading simplifications in your area;
 - terms, notation, numbers or names used inconsistently between sections (yours included);
-- explanations duplicated across sections, or gaps between them;
+- explanations duplicated across sections (the same idea, analogy or demo twice), padding the point doesn't need,
+  or gaps in the story;
 - places where a section should connect to yours (a link, a shared example, the same toy model);
 - missed opportunities: a clearer analogy, a better visual, a toy example that would make something click.
 Be specific and constructive: at most 8 comments, most important first. Then give notes for the whole team
@@ -413,13 +527,18 @@ You've opened a webpage that explains a research paper.
 {{page}}
 </page>
 
-Now answer as {{short}}. Sections are marked "=== SECTION id ===" in the text; use those ids.
+Now answer as {{short}}. Sections are marked "=== SECTION id ===" in the text; use those ids. Say honestly where
+the page felt long, slow to get to the point, or like it was telling you the same thing again.
 """
 
 READER_WITH_SCREENS = """First look at the page the way you'd scroll through it: open these screenshots in order with the
 Read tool: {{shots}}. Then read the text version below for details. You can't click the interactive widgets
-(they're described in brackets in the text), but judge whether you'd understand what to do with them and what they
-show."""
+yourself (they're described in brackets in the text), but judge whether you'd understand what to do with them and
+what they show.{{played}}"""
+
+READER_PLAYED = """ The last screenshots show widgets after someone operated them, so you can see what playing with
+them does: {{played}}. Say in "visuals" whether trying a widget would have taught you something, and ask for
+something to try wherever the page only tells you in words."""
 
 READER_TEXT_ONLY = """Here is the page as text; pictures and interactive widgets are described in brackets."""
 
@@ -502,12 +621,22 @@ PLAN_SCHEMA = obj(
               problem=S, key_idea=S, method=S,
               results=arr(obj(claim=text("a result with its exact numbers"), where=text("page, table or figure"))),
               limitations=arr(S)),
+    story=obj(point=text("the one thing every reader should walk away with, one plain sentence"),
+              beats=arr(text("one step of the story, in reading order"))),
     hero=obj(**HERO["properties"], key_numbers=arr(KEY_NUMBER)),
     experts=arr(obj(id=S, name=text("e.g. 'Diffusion-geometry expert'"), expertise=S,
                     brief=text("what they own, the angle to take, pitfalls to avoid"))),
-    sections=arr(obj(id=S, title=S, owner=text("an expert id"), goal=S, key_points=arr(S),
+    sections=arr(obj(id=S, title=S, owner=text("an expert id"), goal=text("the beat of the story this section is"),
+                     key_points=arr(S), avoid=text("what this section must not repeat or cover, because another section does"),
                      paper_refs=text("where the material is in the paper"),
-                     visuals=arr(text("a concrete visual or interactive idea")),
+                     concepts=arr(obj(id=text("short lowercase id with hyphens, unique on the page, e.g. 'mix-as-light'"),
+                                      concept=text("the idea the reader must get, one sentence"),
+                                      visual=text("the recipe: stepper, image lab, wipe, draggable diagram, slider and chart, "
+                                                  "architecture walk-through, results chart, or paper figure"),
+                                      interaction=text("what the reader does and what they see change"),
+                                      default=text("what the default state already shows"),
+                                      built_on=text("the paper material it uses, e.g. 'Figure 1 panels (extract_images page 1)', "
+                                                    "'Table 2', or 'toy: drawn shapes'"))),
                      figures=arr(text("a figure id from the list, e.g. 'fig2'")))),
     glossary=arr(TERM),
     notes=text("names, notation and tone everyone must use; claims the team must not make"),
@@ -519,6 +648,8 @@ READER_SCHEMA = obj(
     score={"type": "integer", "description": "1-10: how well the page explains the paper to you"},
     teach_back=text("in your own words and voice: what did the researchers do, and why does it matter? 2-4 sentences"),
     stopped_at=text("where you would lose interest or give up, or 'read to the end'"),
+    got_the_point=text("where on the page you first understood what the paper is about and why it matters (a section id), or 'never'"),
+    repetitive=arr(obj(section_id=S, what=text("what felt repeated, padded or unnecessary, and where it was said before"))),
     confusing=arr(obj(section_id=S, quote=text("exact text from the page"), why=S)),
     unexplained_terms=arr(S),
     visuals=arr(obj(section_id=S, verdict=enum("helped", "confusing", "broken", "too small or cluttered"), note=S)),

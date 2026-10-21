@@ -64,10 +64,37 @@ OVERFLOW_JS = r"""
 """
 
 
+# Operate one control of a widget, the way a reader would try it first. Returns what was done, or null.
+PLAY_JS = r"""
+(w) => {
+  const visible = (el) => el.offsetParent !== null && !el.disabled && !el.closest('details:not([open])');
+  const range = [...w.querySelectorAll('input[type=range]')].find(visible);
+  if (range) {
+    const min = Number(range.min || 0), max = Number(range.max || 100), v = Number(range.value);
+    const to = Math.abs(v - max) > Math.abs(v - min) ? max : min;
+    range.value = to; range.dispatchEvent(new Event('input', { bubbles: true })); range.dispatchEvent(new Event('change', { bubbles: true }));
+    const label = range.getAttribute('aria-label') || (range.closest('label') || {}).textContent || 'slider';
+    return 'moved the slider "' + label.trim().slice(0, 40) + '" to ' + to;
+  }
+  const select = [...w.querySelectorAll('select')].find(visible);
+  if (select && select.options.length > 1) {
+    select.selectedIndex = (select.selectedIndex + 1) % select.options.length; select.dispatchEvent(new Event('change', { bubbles: true }));
+    return 'picked "' + select.options[select.selectedIndex].text.slice(0, 40) + '" in a menu';
+  }
+  const buttons = [...w.querySelectorAll('button, [role=button], input[type=checkbox], input[type=radio]')].filter(visible)
+    .filter((b) => b.getAttribute('aria-pressed') !== 'true' && !b.checked && !/back|prev|reset|smaller/i.test(b.textContent));
+  const b = buttons.find((x) => /next|play|step|run|show|try/i.test(x.textContent)) || buttons[buttons.length - 1];
+  if (b) { b.click(); return 'clicked "' + (b.textContent || b.getAttribute('aria-label') || b.value || 'a control').trim().slice(0, 40) + '"'; }
+  return null;
+}
+"""
+
+
 @dataclass
 class Render:
     problems: dict[str, list[str]] = field(default_factory=dict)  # section id (or "page") -> problems
     shots: list[Path] = field(default_factory=list)
+    plays: list[tuple[Path, str]] = field(default_factory=list)  # (screenshot after operating a widget, what was done)
     height: int = 0
 
     def add(self, where: str, problem: str) -> None:
@@ -97,9 +124,12 @@ class Browser:
                 self.available, self.note = False, f"Playwright failed to start: {e}"
                 return False
             errors = []
+            # drafts load figures/ from disk; this lets widgets read their pixels (PV.imageLab), as on the final
+            # page, where images are inlined
+            args = ["--allow-file-access-from-files"]
             for options in ({}, {"channel": "chrome"}, {"channel": "msedge"}):  # bundled Chromium, else an installed browser
                 try:
-                    self._browser = await self._pw.chromium.launch(**options)
+                    self._browser = await self._pw.chromium.launch(args=args, **options)
                     return True
                 except Exception as e:
                     errors.append(str(e).splitlines()[0])
@@ -115,8 +145,9 @@ class Browser:
         self._browser = self._pw = None
 
     async def render(self, page_path: Path, *, shots: Path | None = None, prefix: str = "page", selector: str | None = None,
-                     max_shots: int = 16, slice_px: int = 1500, open_details: bool = False) -> Render | None:
-        """Load the page at desktop width (screenshots, errors), then at phone width (overflow)."""
+                     max_shots: int = 16, slice_px: int = 1500, open_details: bool = False, max_plays: int = 0) -> Render | None:
+        """Load the page at desktop width (screenshots, errors), then at phone width (overflow). With max_plays,
+        also operate up to that many widgets (a slider, a button) and screenshot them afterwards."""
         if not await self.start():
             return None
         out = Render()
@@ -168,6 +199,9 @@ class Browser:
                     out.shots.append(path)
                     y += h
 
+            if max_plays and shots:
+                await self._play(page, out, shots, prefix, selector, max_plays)
+
             await page.set_viewport_size({"width": PHONE, "height": 800})
             await page.wait_for_timeout(500)
             for where, problem in await page.evaluate(OVERFLOW_JS):
@@ -175,3 +209,28 @@ class Browser:
         finally:
             await context.close()
         return out
+
+    async def _play(self, page, out: Render, shots: Path, prefix: str, selector: str | None, max_plays: int) -> None:
+        """Operate each widget's first control; report widgets that don't visibly change."""
+        widgets = await page.query_selector_all(f"{selector or 'main'} .widget")
+        for w in widgets:
+            if len(out.plays) >= max_plays:
+                break
+            where = await w.evaluate("(w) => { const s = w.closest('section[id]'); return s ? s.id : 'page'; }")
+            name = await w.evaluate("(w) => (w.querySelector('h3') || {}).textContent || w.id || 'a widget'")
+            try:
+                await w.scroll_into_view_if_needed(timeout=3000)
+                before = await w.screenshot(type="jpeg", quality=70)
+                action = await w.evaluate(PLAY_JS)
+                if not action:
+                    continue
+                await page.wait_for_timeout(600)
+                path = shots / f"{prefix}-play-{len(out.plays) + 1:02d}.jpg"
+                after = await w.screenshot(path=str(path), type="jpeg", quality=70)
+            except Exception as e:
+                out.add(where, f"Could not operate the widget \"{name.strip()[:60]}\": {str(e).splitlines()[0][:160]}")
+                continue
+            if after == before:
+                out.add(where, f"Widget \"{name.strip()[:60]}\": {action}, and nothing on screen changed. "
+                               "Every control must visibly change what the widget shows.")
+            out.plays.append((path, f"{where}: \"{name.strip()[:60]}\" after the reader {action}"))

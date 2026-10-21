@@ -80,13 +80,14 @@ class Team:
 
     async def run(self, name: str, prompt: str, *, system: str, tools=(), writable=(), mcp: dict | None = None,
                   schema: dict | None = None, need_data: bool = True, model: str | None = None,
-                  max_turns: int = 40, retries: int = 2) -> Run:
+                  effort: str | None = None, max_turns: int = 40, retries: int = 2) -> Run:
         """Run one agent to completion, retrying failures (but not an exhausted usage window)."""
         async with self.slots:
             for attempt in range(retries + 1):
                 try:
                     return await self._run(name, prompt, system=system, tools=tools, writable=writable, mcp=mcp,
-                                           schema=schema, need_data=need_data, model=model, max_turns=max_turns)
+                                           schema=schema, need_data=need_data, model=model, effort=effort,
+                                           max_turns=max_turns)
                 except UsageLimit:
                     raise
                 except Exception as e:
@@ -98,7 +99,7 @@ class Team:
                     self.say(name, f"failed ({type(e).__name__}: {str(e)[:160]}), retrying in {wait}s")
                     await asyncio.sleep(wait)
 
-    async def _run(self, name, prompt, *, system, tools, writable, mcp, schema, need_data, model, max_turns) -> Run:
+    async def _run(self, name, prompt, *, system, tools, writable, mcp, schema, need_data, model, effort, max_turns) -> Run:
         system_file = self.logs / f"{name}.system.md"
         system_file.write_text(system)
         log = self.logs / f"{name}.md"
@@ -106,7 +107,7 @@ class Team:
         mcp = mcp or {}
         options = ClaudeAgentOptions(
             model=model or self.model,
-            effort=self.effort,
+            effort=effort or self.effort,
             system_prompt={"type": "file", "path": str(system_file)},
             cwd=str(self.ws),
             tools=list(tools),
@@ -126,7 +127,7 @@ class Team:
             stderr=lambda line: self._note(log, f"stderr: {line}"),
         )
         started, result, texts = time.time(), None, []
-        self.say(name, f"started ({options.model}, effort {self.effort})")
+        self.say(name, f"started ({options.model}, effort {options.effort})")
         async for message in query(prompt=prompt, options=options):
             if isinstance(message, SystemMessage) and message.subtype == "init":
                 self._check_auth(message.data)
@@ -245,6 +246,8 @@ class Team:
             return f"check_section {args.get('section_id', '')}"
         if tool == "crop_figure":
             return f"crop_figure page {args.get('page')} -> figures/{args.get('name')}.png"
+        if tool == "extract_images":
+            return f"extract_images page {args.get('page')}"
         if tool == "StructuredOutput":
             return "answer submitted"
         return tool

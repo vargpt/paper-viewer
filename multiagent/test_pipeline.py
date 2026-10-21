@@ -24,7 +24,7 @@ class StubTeam(multiagent.Team):
     calls: list[str] = []
 
     async def run(self, name, prompt, *, system, tools=(), writable=(), mcp=None, schema=None, need_data=True,
-                  model=None, max_turns=40, retries=2):
+                  model=None, effort=None, max_turns=40, retries=2):
         StubTeam.calls.append(name)
         plan_path = self.ws / "plan.json"
         plan = json.loads(plan_path.read_text()) if plan_path.exists() else None
@@ -41,6 +41,7 @@ class StubTeam(multiagent.Team):
             data = {"summary": "done", "visuals": [], "concerns": []}
         elif schema is P.READER_SCHEMA:
             data = {"score": 6, "teach_back": "t", "stopped_at": "read to the end",
+                    "got_the_point": ids[0], "repetitive": [{"section_id": ids[-1], "what": "w"}],
                     "confusing": [{"section_id": ids[0], "quote": "q", "why": "w"}], "unexplained_terms": ["latent"],
                     "visuals": [{"section_id": ids[-1], "verdict": "helped", "note": "n"}], "liked": [], "requests": ["r"],
                     "section_scores": [{"section_id": i, "score": 6} for i in ids]}
@@ -63,9 +64,11 @@ class StubTeam(multiagent.Team):
 def _plan() -> dict:
     hero = {"headline": "h", "subtitle": "s", "kid": "k", "general": "g", "expert": "e", "why_it_matters": "w",
             "key_numbers": [{"value": "1", "label": "l", "source": "Table 1"}]}
-    section = {"goal": "g", "key_points": ["k"], "paper_refs": "p", "visuals": ["v"], "figures": ["fig1", "fig99"]}
+    section = {"goal": "g", "key_points": ["k"], "avoid": "a", "paper_refs": "p", "figures": ["fig1", "fig99"],
+               "concepts": [{"id": "Key Idea", "concept": "c", "visual": "wipe", "interaction": "i", "default": "d", "built_on": "b"}]}
     return {"paper": {"title": "t", "authors": "a", "venue": "v", "year": "y", "field": "f", "practitioner": "p", "problem": "p",
                       "key_idea": "k", "method": "m", "results": [], "limitations": []},
+            "story": {"point": "p", "beats": ["b1", "b2"]},
             "hero": hero,
             "experts": [{"id": "Story Teller", "name": "Storyteller", "expertise": "e", "brief": "b"},
                         {"id": "geo", "name": "Geometer", "expertise": "e", "brief": "b"},
@@ -93,6 +96,7 @@ def test_pipeline() -> None:
         assert sum(n.startswith("reader-") for n in names) == 12 and sum(n.startswith("peer-") for n in names) == 6
         assert sum("-revise-r" in n for n in names) == 6 and sum(n.endswith("-fix") for n in names) == 4
         assert [h["round"] for h in meta["history"]] == [1, 2, "final"]
+        assert meta["history"][0]["words"] > 0
         page = (out / "stub.html").read_text()
         assert "data:image/png;base64" in page or "fig1" not in page
         assert "A clearer kid summary." in page and "Glossary" in page

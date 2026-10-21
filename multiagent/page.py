@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pymupdf
 
+HERE = Path(__file__).resolve().parent
 PLOTLY = "https://cdn.plot.ly/plotly-2.35.2.min.js"
 KATEX = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist"
 
@@ -227,6 +228,10 @@ window.PV = (() => {
 })();
 """
 
+# explorable-visual building blocks (PV.imageLab, PV.stepper, PV.compare, PV.svg, PV.drag)
+VISUAL_JS = (HERE / "visual.js").read_text()
+VISUAL_CSS = (HERE / "visual.css").read_text()
+
 SHELL_JS = r"""
 (() => {
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -423,7 +428,7 @@ def assemble(ws: Path, plan: dict, *, readers: list[str], rounds: int, only: str
         SHELL,
         title=esc(plan["hero"]["headline"]),
         description=esc(plan["hero"]["general"]),
-        katex=KATEX, plotly=PLOTLY, css=CSS, pv_js=PV_JS, shell_js=SHELL_JS,
+        katex=KATEX, plotly=PLOTLY, css=CSS + VISUAL_CSS, pv_js=PV_JS + VISUAL_JS, shell_js=SHELL_JS,
         hero="" if only else render_hero(plan),
         toc="".join(links),
         sections="\n".join(parts),
@@ -450,7 +455,9 @@ def inline_images(page: str, ws: Path) -> str:
             data, mime = pix.tobytes("jpg", jpg_quality=85), "image/jpeg"
         return f'{m.group(1)}data:{mime};base64,{base64.b64encode(data).decode()}{m.group(3)}'
 
-    return re.sub(r'''(\bsrc\s*=\s*["'])(figures/[^"']+)(["'])''', data_uri, page)
+    # src="figures/..." and quoted paths in scripts ('figures/x.jpg' for PV.imageLab): a canvas can only read
+    # the pixels of a same-origin image, which a data: URI is
+    return re.sub(r'''(\bsrc\s*=\s*["']|["'])(figures/[\w./-]+\.(?:png|jpe?g|webp|gif|svg))(["'])''', data_uri, page)
 
 
 # ---------------------------------------------------------------- checks
@@ -485,8 +492,19 @@ def static_check(fragment: str, sid: str, ws: Path) -> list[str]:
     if re.search(r"\$\$|\$[^$\n]*[\\^_][^$\n]*\$", text):
         problems.append(r"Math must use \( ... \) inline and \[ ... \] for display; $...$ is not rendered.")
     problems += _js_syntax(fragment)
-    if len(fragment) > 60_000:
-        problems.append(f"The section is {len(fragment) // 1000} KB; keep it under ~40 KB (cut repetition, move depth into details).")
+    if len(fragment) > 70_000:
+        problems.append(f"The section is {len(fragment) // 1000} KB; keep it under ~50 KB (use the PV building blocks, "
+                        "cut repetition, move depth into details).")
+    return problems
+
+
+def concept_check(fragment: str, section: dict) -> list[str]:
+    """Every concept the plan gives this section needs its visual, marked data-concept="<concept id>"."""
+    problems = []
+    for c in section.get("concepts") or []:
+        if not re.search(rf'''\bdata-concept\s*=\s*["\']{re.escape(c["id"])}["\']''', fragment):
+            problems.append(f'No visual for the concept "{c["id"]}" ({c.get("concept", "")[:80]}): build its '
+                            f'{c.get("visual", "visual")} and mark its container data-concept="{c["id"]}".')
     return problems
 
 
@@ -583,6 +601,13 @@ class _PageText(HTMLParser):
     def handle_data(self, data):
         if not self.skip:
             self.out.append(data)
+
+
+def main_words(fragment: str) -> int:
+    """Words of a section's main text: what a reader meets without opening any <details>."""
+    text = re.sub(r"<(details|script|style)\b.*?</\1>", " ", fragment, flags=re.S | re.I)
+    text = html.unescape(re.sub(r"<[^>]+>", " ", text))
+    return len(re.findall(r"\w+", text))
 
 
 def page_text(page_html: str) -> str:

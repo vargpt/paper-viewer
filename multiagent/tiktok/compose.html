@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>tiktok frame</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=block" rel="stylesheet">
+<!--
+  One frame of the video. render.py calls setup(timeline) once, then frame(t) for every frame and
+  screenshots the page. Layouts: "full" (1080x1920) and "split" (the video in the top half, the
+  bottom half transparent for gameplay footage underneath).
+-->
+<style>
+  :root { --accent: #ffe14d; --ink: #0b0b10; }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
+  body { font-family: Montserrat, -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; overflow: hidden; background: #08080c; }
+  .layer { position: absolute; inset: 0; overflow: hidden; }
+  .bg { position: absolute; inset: -80px; background-size: cover; background-position: center;
+        filter: blur(48px) brightness(.45) saturate(1.3); }
+  .window { position: absolute; left: 0; width: 1080px; overflow: hidden; }
+  .cam { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .cam img { display: block; border-radius: 22px; box-shadow: 0 30px 90px rgba(0,0,0,.6); }
+  .broll { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .vignette { position: absolute; inset: 0; pointer-events: none;
+              background: linear-gradient(to bottom, rgba(0,0,0,.35), transparent 22%, transparent 62%, rgba(0,0,0,.55)); }
+
+  #title { position: absolute; left: 70px; right: 70px; text-align: center; }
+  #title span { display: inline; background: #fff; color: var(--ink); font-weight: 800; font-size: 64px;
+                line-height: 1.32; padding: 6px 18px; border-radius: 14px; box-decoration-break: clone;
+                -webkit-box-decoration-break: clone; }
+
+  #caption { position: absolute; left: 50px; right: 50px; text-align: center; font-weight: 900;
+             font-size: 92px; line-height: 1.08; color: #fff; text-transform: uppercase; letter-spacing: -.5px;
+             -webkit-text-stroke: 14px #000; paint-order: stroke fill;
+             text-shadow: 0 8px 24px rgba(0,0,0,.55); transform: translateY(-50%); }
+  #caption .w { display: inline-block; margin: 0 12px; transition: none; }
+  #caption .on { color: var(--accent); }
+
+  #sticker { position: absolute; left: 0; right: 0; text-align: center; }
+  #sticker span { display: inline-block; background: var(--accent); color: var(--ink); font-weight: 900;
+                  font-size: 76px; padding: 14px 34px; border-radius: 22px; transform: rotate(-3deg);
+                  box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+
+  #cite { position: absolute; left: 0; right: 0; text-align: center; }
+  #cite span { display: inline-block; background: rgba(0,0,0,.72); color: #fff; font-weight: 700;
+               font-size: 38px; padding: 14px 28px; border-radius: 999px; border: 2px solid rgba(255,255,255,.25); }
+
+  #bar { position: absolute; left: 0; height: 8px; background: var(--accent); }
+</style>
+</head>
+<body>
+<div id="stage"><div id="layers"></div><div class="vignette"></div></div>
+<div id="title"></div>
+<div id="sticker"></div>
+<div id="caption"></div>
+<div id="cite"></div>
+<div id="bar"></div>
+<script>
+let T = null, H = 1920, layers = [];
+const ease = (x) => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+const lerp = (a, b, k) => a + (b - a) * k;
+const $ = (id) => document.getElementById(id);
+
+// The camera: a rect in image pixels with the box's aspect ratio, containing `r`.
+function fitRect(r, box) {
+  let [x0, y0, x1, y1] = r, w = x1 - x0, h = y1 - y0, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const a = box.w / box.h;
+  if (w / h > a) h = w / a; else w = h * a;
+  return [cx - w / 2, cy - h / 2, w, h];
+}
+
+async function setup(timeline) {
+  T = timeline;
+  H = T.layout === 'split' ? 960 : 1920;
+  const stage = $('stage');
+  stage.style.height = H + 'px';
+  if (T.layout === 'split') {   // the seam between the video and the gameplay gets the captions
+    $('caption').style.top = '960px';
+    $('title').style.top = '70px';
+    $('sticker').style.top = '700px';
+    $('cite').style.top = '840px';
+    $('bar').style.top = '952px';
+    $('caption').style.fontSize = '84px';
+  } else {
+    $('caption').style.top = '1600px';
+    $('title').style.top = '120px';
+    $('sticker').style.top = '1330px';
+    $('cite').style.top = '1760px';
+    $('bar').style.top = '1912px';
+  }
+  // footage is framed in a window: the top half in "split", between the title and the captions in "full"
+  const box = T.layout === 'split' ? {y: 0, w: 1080, h: 960} : {y: 300, w: 1080, h: 1110};
+  const host = $('layers');
+  for (const s of T.scenes) {
+    const el = document.createElement('div');
+    el.className = 'layer';
+    el.style.opacity = 0;
+    const L = {el, s};
+    if (s.kind === 'broll') {
+      L.img = new Image(); L.img.className = 'broll'; el.appendChild(L.img);
+    } else {
+      const bg = document.createElement('div'); bg.className = 'bg';
+      bg.style.backgroundImage = `url("${s.frames[0]}")`; el.appendChild(bg);
+      const win = document.createElement('div'); win.className = 'window';
+      win.style.top = box.y + 'px'; win.style.height = box.h + 'px';
+      const cam = document.createElement('div'); cam.className = 'cam';
+      L.img = new Image(); L.img.src = s.frames[0];
+      L.img.style.width = s.size[0] + 'px'; L.img.style.height = s.size[1] + 'px';
+      cam.appendChild(L.img); win.appendChild(cam); el.appendChild(win); L.cam = cam;
+      // Margins so the shot doesn't touch the edges of the frame, and the captions have room.
+      const [iw, ih] = s.size, f = s.focus;
+      const focus = [f[0] * iw, f[1] * ih, f[2] * iw, f[3] * ih];
+      const pad = (r, k) => { const w = r[2] - r[0], h = r[3] - r[1]; return [r[0] - w * k, r[1] - h * k, r[2] + w * k, r[3] + h * k]; };
+      const whole = fitRect(pad([0, 0, iw, ih], .06), box), tight = fitRect(pad(focus, .08), box);
+      if (s.motion === 'zoom_in') [L.a, L.b] = [whole, tight];
+      else if (s.motion === 'zoom_out') [L.a, L.b] = [tight, whole];
+      else if (s.motion === 'pan_down' || s.motion === 'pan_up') {
+        // a window as wide as the focus columns, scrolling over the focus rows
+        const w = (focus[2] - focus[0]) * 1.08, h = w * box.h / box.w, cx = (focus[0] + focus[2]) / 2;
+        const top = [cx - w / 2, focus[1] - h * .04, w, h];
+        const bot = [cx - w / 2, Math.max(focus[1], focus[3] - h * .96), w, h];
+        [L.a, L.b] = s.motion === 'pan_down' ? [top, bot] : [bot, top];
+      } else {   // still / play: a slow push into the focus
+        const [x, y, w, h] = tight;
+        L.a = [x - w * .03, y - h * .03, w * 1.06, h * 1.06]; L.b = tight;
+      }
+      if (s.frames.length > 1) {   // flipbook frames must be decoded before they're needed
+        L.flip = s.frames.map((src) => { const i = new Image(); i.src = src; return i; });
+      }
+    }
+    host.appendChild(el);
+    layers.push(L);
+  }
+  await document.fonts.ready;
+  await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+}
+
+async function frame(t) {
+  const fade = 0.16, waits = [];
+  for (const L of layers) {
+    const s = L.s, on = t >= s.start - fade && t < s.end + 0.001;
+    if (!on) { L.el.style.display = 'none'; continue; }
+    L.el.style.display = 'block';
+    L.el.style.opacity = s.start <= 0.001 ? 1 : ease((t - s.start + fade) / fade);
+    const k = (t - s.start) / Math.max(0.1, s.end - s.start);
+    if (s.kind === 'broll') {
+      const n = s.frames.length, i = Math.min(n - 1, Math.max(0, Math.floor(k * n)));
+      if (L.img.dataset.i !== String(i)) { L.img.src = s.frames[i]; L.img.dataset.i = i; waits.push(L.img.decode().catch(() => {})); }
+      const z = 1.0 + 0.05 * ease(k);
+      L.img.style.transform = `scale(${z})`;
+      continue;
+    }
+    if (L.flip) {   // ping-pong through the slider frames, about one and a half sweeps per scene
+      const n = L.flip.length, p = (Math.max(0, k) * 1.5 * 2 * (n - 1)) % (2 * (n - 1));
+      const i = Math.round(p < n - 1 ? p : 2 * (n - 1) - p);
+      if (L.img.src !== L.flip[i].src) { L.img.src = L.flip[i].src; waits.push(L.img.decode().catch(() => {})); }
+    }
+    const e = ease(Math.max(0, k)), r = L.a.map((v, j) => lerp(v, L.b[j], e));
+    const z = 1080 / r[2];
+    L.cam.style.transform = `translate(${-r[0] * z}px, ${-r[1] * z}px) scale(${z})`;
+  }
+
+  // the hook title over the first scene
+  const s0 = T.scenes[0], title = $('title');
+  if (t < s0.end - 0.05 && T.title) {
+    title.innerHTML = `<span>${T.title}</span>`;
+    const pop = ease(t / 0.25);
+    title.style.opacity = pop; title.style.transform = `scale(${0.85 + 0.15 * pop})`;
+  } else title.innerHTML = '';
+
+  // sticker
+  const cur = T.scenes.find((s) => t >= s.start && t < s.end) || T.scenes[T.scenes.length - 1];
+  const st = $('sticker');
+  if (cur.on_screen) {
+    const k = ease((t - cur.start - 0.2) / 0.22);
+    st.innerHTML = `<span>${cur.on_screen}</span>`;
+    st.style.opacity = k; st.style.transform = `scale(${0.6 + 0.4 * k})`;
+  } else st.innerHTML = '';
+
+  // word-by-word captions, a few words at a time
+  const cap = $('caption'), chunk = T.chunks.find((c) => t >= c.start && t < c.end);
+  if (chunk) {
+    cap.innerHTML = chunk.words.map((w) => `<span class="w${t >= w.start ? ' on' : ''}">${w.text}</span>`).join(' ');
+    const pop = ease((t - chunk.start) / 0.09);
+    cap.style.transform = `translateY(-50%) scale(${0.88 + 0.12 * pop})`;
+  } else cap.innerHTML = '';
+
+  // credit over the last scene
+  const last = T.scenes[T.scenes.length - 1], cite = $('cite');
+  if (t >= last.start && T.cite) {
+    cite.innerHTML = `<span>${T.cite}</span>`;
+    cite.style.opacity = ease((t - last.start) / 0.3);
+  } else cite.innerHTML = '';
+
+  $('bar').style.width = (1080 * Math.min(1, t / T.duration)) + 'px';
+  await Promise.all(waits);
+}
+</script>
+</body>
+</html>

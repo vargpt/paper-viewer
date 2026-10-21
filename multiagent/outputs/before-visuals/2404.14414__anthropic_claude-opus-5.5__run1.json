@@ -1,0 +1,78 @@
+{
+ "framework": "multiagent",
+ "model": "claude-opus-5-5",
+ "reader_model": "claude-sonnet-5-5",
+ "effort": "high",
+ "expert_effort": "medium",
+ "auth": "subscription",
+ "paper": "2404.14414.pdf",
+ "rounds": 1,
+ "readers": [
+  "kid",
+  "teen",
+  "professor",
+  "senior"
+ ],
+ "experts": [
+  {
+   "id": "raw-optics",
+   "name": "RAW color pipeline and glass optics expert",
+   "sections": [
+    "the-problem",
+    "fake-it-right"
+   ]
+  },
+  {
+   "id": "restoration-arch",
+   "name": "Neural image-restoration architect",
+   "sections": [
+    "the-system"
+   ]
+  },
+  {
+   "id": "evidence",
+   "name": "Evaluation and data-visualization specialist for image restoration",
+   "sections": [
+    "evidence",
+    "limits"
+   ]
+  }
+ ],
+ "history": [
+  {
+   "round": 1,
+   "readers": {
+    "kid": 4,
+    "teen": 6,
+    "professor": 6,
+    "senior": 6
+   },
+   "fact_check": {
+    "major": 0,
+    "minor": 2
+   },
+   "browser_problems": 0,
+   "words": 1989,
+   "editor_done": false
+  },
+  {
+   "round": "final",
+   "fact_check": {
+    "major": 0,
+    "minor": 7
+   },
+   "browser_problems": 0,
+   "note": "counted before the final fixes"
+  }
+ ],
+ "agent_sessions": 3,
+ "seconds": 53,
+ "cost_usd_api_equivalent": 2.09,
+ "tokens": {
+  "input_tokens": 38,
+  "output_tokens": 6866,
+  "cache_read_tokens": 905144,
+  "cache_write_tokens": 221709
+ },
+ "workspace": "/mnt/riemann_share_2/home/tedlasai/paper-viewer/multiagent/work/2404.14414__anthropic_claude-opus-5.5__run1"
+}

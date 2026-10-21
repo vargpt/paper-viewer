@@ -1,0 +1,77 @@
+{
+ "framework": "multiagent",
+ "model": "anthropic/claude-opus-5.5",
+ "reader_model": "anthropic/claude-sonnet-5.5",
+ "effort": "high",
+ "auth": "openrouter",
+ "paper": "Konate_SphereEdit_WACV2026.pdf",
+ "rounds": 1,
+ "readers": [
+  "kid",
+  "teen",
+  "professor",
+  "senior"
+ ],
+ "experts": [
+  {
+   "id": "diffusion",
+   "name": "Diffusion-editing and cross-attention expert",
+   "sections": [
+    "problem",
+    "inside-a-step"
+   ]
+  },
+  {
+   "id": "geometry",
+   "name": "Spherical-geometry and explorable-toy designer",
+   "sections": [
+    "dial"
+   ]
+  },
+  {
+   "id": "evidence",
+   "name": "Image-editing evaluation and responsible-AI analyst",
+   "sections": [
+    "evidence",
+    "catch"
+   ]
+  }
+ ],
+ "history": [
+  {
+   "round": 1,
+   "readers": {
+    "kid": 5,
+    "teen": 7,
+    "professor": 7,
+    "senior": 6
+   },
+   "fact_check": {
+    "major": 0,
+    "minor": 3
+   },
+   "browser_problems": 0,
+   "words": 1989,
+   "editor_done": false
+  },
+  {
+   "round": "final",
+   "fact_check": {
+    "major": 0,
+    "minor": 2
+   },
+   "browser_problems": 0,
+   "note": "counted before the final fixes"
+  }
+ ],
+ "agent_sessions": 15,
+ "seconds": 808,
+ "cost_usd_api_equivalent": 11.32,
+ "tokens": {
+  "input_tokens": 138,
+  "output_tokens": 134705,
+  "cache_read_tokens": 4327036,
+  "cache_write_tokens": 777911
+ },
+ "workspace": "/mnt/riemann_share_2/home/tedlasai/paper-viewer/multiagent/work/Konate_SphereEdit_WACV2026__anthropic_claude-opus-5.5__run1"
+}

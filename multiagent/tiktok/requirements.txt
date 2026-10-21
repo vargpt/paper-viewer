@@ -1,0 +1,5 @@
+requests
+python-dotenv
+playwright   # then: playwright install chromium (or have Google Chrome installed)
+yt-dlp       # only to download the gameplay for the Subway Surfers version once
+# also needs ffmpeg on the PATH

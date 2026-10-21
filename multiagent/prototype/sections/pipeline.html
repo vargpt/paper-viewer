@@ -1,0 +1,60 @@
+<section class="chapter" id="pipeline">
+  <h2>How a camera turns light into a photo</h2>
+  <p class="tldr"><strong>In one sentence:</strong> a camera's raw numbers measure light, and the processing that makes them look good breaks that, so the paper mixes its fake reflections before that point.</p>
+
+  <div class="widget">
+    <span class="badge toy">Toy example</span>
+    <h3>Try it: walk a photo through the 8 steps</h3>
+    <p class="how">Press Next, or click a step. The picture shows the numbers at that step, put on screen as they are.</p>
+    <div class="pv-split"><div id="pipeline-steps"></div><div id="pipeline-lab"></div></div>
+    <p class="notice"><strong>What to notice:</strong> after step 3 the numbers are proportional to light, so two scenes can be added like light adds on glass. Steps 7 and 8 bend the numbers to look good on a screen, and after that, adding two photos no longer means adding light.</p>
+  </div>
+  <script>
+    (() => {
+      const BLACK = 0.06, GAIN = 0.55;
+      const LIGHT = [1.0, 0.78, 0.5];                         // warm indoor light, before white balance
+      const CAM = [[0.62, 0.33, 0.05], [0.22, 0.72, 0.06], [0.06, 0.32, 0.62]];   // toy camera: overlapping color filters
+      const XYZ = [[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]];
+      const mul = (M, v) => M.map((r) => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
+      const lit = (s, i) => [0, 1, 2].map((c) => s.t.lin[i + c] * LIGHT[c] * GAIN);   // light reaching the sensor
+      const raw = (s, i) => mul(CAM, lit(s, i)).map((v) => v + BLACK);               // the camera's numbers, with black level
+      const w = 480, filter = (i) => { const p = i / 3, x = p % w, y = (p / w) | 0; return y % 2 ? (x % 2 ? 2 : 1) : (x % 2 ? 1 : 0); };
+      let step = 0;
+      const show = [
+        (s, i) => { const v = raw(s, i), f = filter(i); return [0, 1, 2].map((c) => (c === f ? v[c] ** 1.15 : 0)); },  // 1 stored values
+        (s, i) => { const v = raw(s, i), f = filter(i); return [0, 1, 2].map((c) => (c === f ? v[c] : 0)); },           // after linearize
+        (s, i) => raw(s, i),                                                                                          // 2 demosaic
+        (s, i) => raw(s, i).map((v) => v - BLACK),                                                                    // 3 black level
+        (s, i) => mul(XYZ, lit(s, i)),                                                                                // 4 XYZ
+        (s, i) => mul(XYZ, lit(s, i).map((v, c) => v / LIGHT[c])),                                                    // 5 white balance
+        (s, i) => lit(s, i).map((v, c) => v / LIGHT[c]),                                                              // 6 to RGB
+        (s, i) => [0, 1, 2].map((c) => s.t.lin[i + c]),                                                               // 7 tone map
+        (s, i) => [0, 1, 2].map((c) => s.t.disp[i + c]),                                                              // 8 gamma
+      ];
+      const steps = [
+        { label: 'Sensor', n: '0', count: 'Before step 1', title: 'The sensor\'s numbers', text: 'Each pixel sits under one red, green or blue filter, so it records one color, as a number roughly proportional to light. Shown as they are, the numbers look dark, and the close-up shows the checkerboard of filters.' },
+        { label: 'Linearize', n: 1, count: 'Step 1 of 8', title: 'Step 1: linearize', text: 'Some sensors store numbers slightly bent; a table straightens them so they are exactly proportional to light.' },
+        { label: 'Demosaic', n: 2, count: 'Step 2 of 8', title: 'Step 2: demosaic', text: 'Each pixel borrows the two colors it is missing from its neighbours, so every pixel now has red, green and blue. The picture is still foggy.' },
+        { label: 'Black level', n: 3, count: 'Step 3 of 8', title: 'Step 3: subtract the black level', text: 'Even in total darkness a sensor reads a little above zero. Subtracting that offset removes the fog. Zero now means no light.' },
+        { label: 'XYZ', n: 4, count: 'Step 4 of 8', mark: 'MIX HERE', title: 'Step 4: convert to XYZ', text: 'The numbers are converted to <b>XYZ</b>, a standard way to measure color that is the same for every camera. Shown directly on screen it looks off. This is where the paper adds its fake reflections: the numbers still measure light, and the room\'s warm light and the daylight outside still have their true colors.' },
+        { label: 'White balance', n: 5, count: 'Step 5 of 8', title: 'Step 5: white balance', text: 'The warm cast of the indoor light is divided out, so white things look white.' },
+        { label: 'To RGB', n: 6, count: 'Step 6 of 8', title: 'Step 6: convert to RGB', text: 'XYZ is converted to the red, green and blue of a screen. The numbers still measure light, which is why the photo looks dark: screens expect bent numbers.' },
+        { label: 'Tone map', n: 7, count: 'Step 7 of 8', title: 'Step 7: tone map', text: 'The photo is brightened and its contrast shaped to look good. From here on, numbers stop adding like light.' },
+        { label: 'Gamma', n: 8, count: 'Step 8 of 8', title: 'Step 8: gamma', text: 'A final curve lifts the darks for the screen. This is the finished photo, and the kind of image earlier methods blended to make their fake reflections.' },
+      ];
+      const status = (k) => (k < 3 ? 'not yet: the black level is still in' : k < 7 ? 'yes: numbers add like light' : 'no: the numbers have been bent');
+      const lab = PV.imageLab('pipeline-lab', {
+        images: { t: 'figures/fig1-clean.jpg' }, width: w,
+        panels: [{ title: 'The photo at this step', display: true, alt: 'The paper\'s Figure 1 photo at the current processing step', pixel: (s, p, i) => show[step](s, i),
+                   inset: () => (step < 3 ? { x: 0.62, y: 0.2, size: 16, zoom: 9 } : null) }],
+        probes: [{ x: 0.42, y: 0.5, label: 'A' }, { x: 0.86, y: 0.93, label: 'B' }],
+        readout: (k, probe, rgb) => {
+          const lum = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+          return probe.label === 'A' ? `dark dress: brightness number ${lum.toFixed(2)}. Adds like light? ${status(step)}`
+                                     : `white fur: brightness number ${lum.toFixed(2)}`;
+        },
+      });
+      PV.stepper('pipeline-steps', { steps, start: 0, onStep: (k) => { step = k; lab.set({}); } });
+    })();
+  </script>
+</section>
