@@ -175,20 +175,28 @@ def draw(tl: dict, out: Path, *, transparent: bool = False, only: list[float] | 
     return files
 
 
+def h264(crf: int = 18) -> list[str]:
+    """libx264 when this ffmpeg has it, else OpenH264 (some conda builds ship only that) at a high bitrate."""
+    encoders = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True).stdout
+    if "libx264" in encoders:
+        return ["-c:v", "libx264", "-preset", "medium", "-crf", str(crf)]
+    return ["-c:v", "libopenh264", "-b:v", "12M", "-maxrate", "16M"]
+
+
 def encode(frames: Path, audio: Path, out: Path) -> None:
     ffmpeg("-framerate", str(FPS), "-i", str(frames / "%05d.jpg"), "-i", str(audio),
-           "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-r", str(FPS),
+           *h264(18), "-pix_fmt", "yuv420p", "-r", str(FPS),
            "-c:a", "copy", "-shortest", "-movflags", "+faststart", str(out))
 
 
 def encode_split(frames: Path, audio: Path, gameplay: Path, offset: float, total: float, out: Path) -> None:
     """The transparent split-layout frames over gameplay in the bottom half."""
-    ffmpeg("-ss", f"{offset:.2f}", "-t", f"{total + 0.5:.2f}", "-i", str(gameplay),
+    ffmpeg("-stream_loop", "-1", "-ss", f"{offset:.2f}", "-t", f"{total + 0.5:.2f}", "-i", str(gameplay),   # loops a short clip
            "-framerate", str(FPS), "-i", str(frames / "%05d.png"), "-i", str(audio),
            "-filter_complex",
            f"[0:v]fps={FPS},scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
            f"crop=1080:960:0:800,pad=1080:1920:0:960:black,setsar=1[g];[g][1:v]overlay=0:0:format=auto,format=yuv420p[v]",
-           "-map", "[v]", "-map", "2:a", "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-r", str(FPS),
+           "-map", "[v]", "-map", "2:a", *h264(19), "-r", str(FPS),
            "-c:a", "copy", "-t", f"{total:.3f}", "-movflags", "+faststart", str(out))
 
 

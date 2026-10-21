@@ -1,0 +1,359 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>fun frame</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=block" rel="stylesheet">
+<!--
+  One frame of a "fun" short: animated scenes built from the paper's own images (dials, wipes,
+  grids, arrow diagrams, light mixing), with bold word-by-word captions. fun.py calls
+  setup(timeline) once (it returns when the images are loaded), then frame(t) for every frame.
+  Each scene kind is a function (scene, u, s): u = 0..1 through the scene, s = seconds into it.
+-->
+<style>
+  :root { --accent: #ffe14d; --pink: #ff3d7f; --cyan: #29d3ff; --ink: #0b0b10; }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #0a0a14; }
+  body { font-family: Montserrat, -apple-system, "Helvetica Neue", Arial, sans-serif; color: #fff; }
+  #bg { position: absolute; inset: 0; }
+  #bar { position: absolute; left: 0; top: 0; height: 10px; background: var(--accent); }
+  .scene { position: absolute; left: 0; top: 0; width: 1080px; height: 1400px; display: none; }
+  .card { position: absolute; border-radius: 26px; overflow: hidden; background: #111;
+          box-shadow: 0 30px 90px rgba(0,0,0,.65), 0 0 0 6px rgba(255,255,255,.92); }
+  .card img, .card canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .sticker { position: absolute; left: 50%; top: 120px; transform: translateX(-50%) rotate(-3deg);
+             background: var(--accent); color: var(--ink); font-weight: 900; font-size: 62px; padding: 10px 30px;
+             border-radius: 16px; letter-spacing: 1px; box-shadow: 0 10px 30px rgba(0,0,0,.4); white-space: nowrap; }
+  .tag { position: absolute; font-weight: 900; font-size: 46px; padding: 8px 22px; border-radius: 14px;
+         color: #fff; background: var(--pink); box-shadow: 0 8px 24px rgba(0,0,0,.45); white-space: nowrap; }
+  .tag.cyan { background: var(--cyan); color: var(--ink); }
+  .tag.yellow { background: var(--accent); color: var(--ink); }
+  .chip { position: absolute; left: 50%; transform: translateX(-50%); background: #fff; color: var(--ink);
+          font-weight: 800; font-size: 44px; padding: 12px 28px; border-radius: 18px; white-space: nowrap;
+          box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  .chip.small { font-size: 38px; }
+  .wipe-line { position: absolute; top: 0; bottom: 0; width: 8px; margin-left: -4px; background: #fff;
+               box-shadow: 0 0 24px rgba(255,255,255,.8); }
+  .pill { position: absolute; left: 140px; right: 140px; height: 92px; border-radius: 46px; display: flex;
+          align-items: center; gap: 22px; padding: 0 34px; font-weight: 800; font-size: 44px;
+          background: rgba(255,255,255,.1); border: 3px solid rgba(255,255,255,.25); box-sizing: border-box; }
+  .pill b { width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,.2); display: grid;
+            place-items: center; font-size: 34px; }
+  .pill.hot { background: var(--accent); color: var(--ink); border-color: var(--accent); }
+  .pill.hot b { background: var(--ink); color: var(--accent); }
+  .pill .mark { margin-left: auto; font-size: 34px; font-weight: 900; }
+  #caption { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; font-weight: 900;
+             font-size: 84px; line-height: 1.1; text-transform: uppercase; letter-spacing: -.5px;
+             -webkit-text-stroke: 12px #000; paint-order: stroke fill; text-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  #caption .w { display: inline-block; margin: 0 10px; }
+  #caption .hi { color: var(--accent); }
+  /* split: the scenes shrink into the top half, captions sit on the seam, gameplay shows below */
+  html.split, html.split body { background: transparent; }
+  body.split #scenes { position: absolute; left: 0; top: 0; width: 1080px; height: 1400px; transform-origin: 50% 0;
+                       transform: scale(.7); }
+  body.split #caption { top: 1000px; font-size: 78px; }
+  body.split #cite { top: 925px; bottom: auto; font-size: 24px; }
+  #cite { position: absolute; left: 0; right: 0; bottom: 70px; text-align: center; font-weight: 700;
+          font-size: 30px; color: rgba(255,255,255,.75); }
+  svg text { font-family: Montserrat, sans-serif; font-weight: 900; }
+</style>
+</head>
+<body>
+<canvas id="bg" width="1080" height="1920"></canvas>
+<div id="scenes"></div>
+<div id="caption"></div>
+<div id="cite"></div>
+<div id="bar"></div>
+<script>
+const W = 1080, IMG = {}, LIN = {};
+let T = null;
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const back = (x) => { x = clamp(x); const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const lerp = (a, b, x) => a + (b - a) * x;
+const el = (tag, cls, parent, html) => { const e = document.createElement(tag); if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html; if (parent) parent.appendChild(e); return e; };
+const NS = 'http://www.w3.org/2000/svg';
+const sv = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+// keyframes [[u, value], ...] -> value at u (eased between keys)
+const keys = (ks, u) => { if (typeof ks === 'number') return ks; if (u <= ks[0][0]) return ks[0][1];
+  for (let i = 1; i < ks.length; i++) if (u <= ks[i][0]) { const [a, va] = ks[i - 1], [b, vb] = ks[i];
+    const x = (u - a) / (b - a); return lerp(va, vb, x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2); }
+  return ks[ks.length - 1][1]; };
+const pop = (s, delay = 0) => back((s - delay) / 0.45);
+
+// ---- images ----------------------------------------------------------------------------------------
+function load(src) {
+  if (IMG[src]) return Promise.resolve(IMG[src]);
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => { IMG[src] = i; res(i); };
+    i.onerror = () => rej(new Error('cannot load ' + src)); i.src = src; });
+}
+function linear(src, w) {   // linear-light RGB floats of an image at width w
+  const k = src + '@' + w; if (LIN[k]) return LIN[k];
+  const img = IMG[src], h = Math.round(img.naturalHeight * w / img.naturalWidth);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h).data, out = new Float32Array(w * h * 3);
+  const lut = new Float32Array(256).map((_, i) => { const v = i / 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+  for (let i = 0, j = 0; i < d.length; i += 4, j += 3) { out[j] = lut[d[i]]; out[j + 1] = lut[d[i + 1]]; out[j + 2] = lut[d[i + 2]]; }
+  return (LIN[k] = { w, h, lin: out, disp: out.map((v) => v <= .0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - .055) });
+}
+const enc = (l) => { l = clamp(l); return 255 * (l <= .0031308 ? 12.92 * l : 1.055 * l ** (1 / 2.4) - .055); };
+
+// a framed image card at (cx, cy) with width w; aspect from the image unless h is given
+function card(parent, src, cx, cy, w, h) {
+  const img = IMG[src]; h = h || Math.round(w * img.naturalHeight / img.naturalWidth);
+  const c = el('div', 'card', parent); Object.assign(c.style, { left: cx - w / 2 + 'px', top: cy - h / 2 + 'px', width: w + 'px', height: h + 'px' });
+  const i = el('img', null, c); i.src = src; c._img = i; c._w = w; c._h = h; c._cx = cx; c._cy = cy;
+  return c;
+}
+const place = (c, scale, rot = 0, dx = 0, dy = 0, op = 1) => {
+  c.style.transform = `translate(${dx}px,${dy}px) scale(${scale}) rotate(${rot}deg)`; c.style.opacity = op; };
+function sticker(parent, text) { return text ? el('div', 'sticker', parent, text) : null; }
+function tag(parent, text, x, y, cls = '') { const t = el('div', 'tag ' + cls, parent, text); t.style.left = x + 'px'; t.style.top = y + 'px'; return t; }
+// a tag whose right edge sits at x (so long labels never run off the screen)
+function tagR(parent, text, x, y, cls = '') { const t = el('div', 'tag ' + cls, parent, text); t.style.right = (W - x) + 'px'; t.style.top = y + 'px';
+  t.style.transformOrigin = 'right center'; return t; }
+
+// ---- scene kinds -------------------------------------------------------------------------------------
+const KINDS = {};
+
+// one image, popping in and slowly pushing in; optional second image cross-fading in at `swap`
+KINDS.card = {
+  build(S, root) {
+    S.c = card(root, S.image, W / 2, 720, S.width || 820);
+    if (S.then) { S.c2 = el('img', null, S.c); S.c2.src = S.then; Object.assign(S.c2.style, { position: 'absolute', inset: 0, opacity: 0 }); }
+    S.st = sticker(root, S.sticker);
+    if (S.tag) S.tg = tagR(root, S.tag, W / 2 + (S.width || 820) / 2 + 20, 720 - S.c._h / 2 - 40, S.tag_color || '');
+    if (S.tag2) S.tg2 = tagR(root, S.tag2, W / 2 + (S.width || 820) / 2 + 20, 720 - S.c._h / 2 - 40, S.tag2_color || 'cyan');
+  },
+  draw(S, u, s) {
+    place(S.c, pop(s) * lerp(1, 1.06, u), lerp(-2, 1, u));
+    const sw = S.swap ?? 0.5, x = S.then ? clamp((u - sw) / 0.08) : 0;
+    if (S.c2) S.c2.style.opacity = x;
+    if (S.st) S.st.style.transform = `translateX(-50%) rotate(-3deg) scale(${pop(s, .1)})`;
+    if (S.tg) S.tg.style.transform = `scale(${pop(s, .25) * (S.tg2 ? 1 - x : 1)})`;
+    if (S.tg2) S.tg2.style.transform = `scale(${S.then ? back(clamp((u - sw) / .1)) : 0})`;
+  },
+};
+
+// before/after: the divider sweeps across, revealing `after`
+KINDS.wipe = {
+  build(S, root) {
+    S.c = card(root, S.before, W / 2, 760, S.width || 720);
+    const top = el('div', null, S.c); Object.assign(top.style, { position: 'absolute', inset: 0 });
+    const a = el('img', null, top); a.src = S.after; Object.assign(a.style, { width: '100%', height: '100%', objectFit: 'cover' });
+    S.top = top; S.line = el('div', 'wipe-line', S.c);
+    S.l1 = tag(root, S.label_before || 'BEFORE', W / 2 - (S.width || 720) / 2 - 20, 760 - S.c._h / 2 - 40, 'yellow');
+    S.l2 = tagR(root, S.label_after || 'AFTER', W / 2 + (S.width || 720) / 2 + 20, 760 + S.c._h / 2 - 30, 'cyan');
+    S.st = sticker(root, S.sticker);
+  },
+  draw(S, u, s) {
+    place(S.c, pop(s) * lerp(1, 1.04, u));
+    const f = keys(S.path || [[0, 1], [.2, 1], [.75, 0], [.85, .08], [1, 0.0]], u);   // fraction still showing `before`
+    S.top.style.clipPath = `inset(0 0 0 ${f * 100}%)`; S.line.style.left = f * 100 + '%'; S.line.style.opacity = f > .002 && f < .998 ? 1 : 0;
+    S.l1.style.transform = `scale(${pop(s, .15) * (f > .15 ? 1 : f / .15)})`; S.l2.style.transform = `scale(${back(clamp((.75 - f) / .25))})`;
+    if (S.st) S.st.style.transform = `translateX(-50%) rotate(-3deg) scale(${pop(s, .1)})`;
+  },
+};
+
+// images popping in: a center image and the rest in a ring, or a plain grid
+KINDS.grid = {
+  build(S, root) {
+    S.cards = []; const n = S.images.length;
+    if (S.layout === 'ring') {
+      S.center = card(root, S.center_image, W / 2, 700, 400);
+      S.images.forEach((src, i) => { const a = -Math.PI / 2 + 2 * Math.PI * i / n;
+        S.cards.push(card(root, src, W / 2 + 380 * Math.cos(a), 700 + 420 * Math.sin(a), 230)); });
+    } else {
+      const cols = S.cols || 3, gw = S.size || 300, gap = 26, rows = Math.ceil(n / cols);
+      S.images.forEach((src, i) => { const r = Math.floor(i / cols), c = i % cols;
+        S.cards.push(card(root, src, W / 2 + (c - (cols - 1) / 2) * (gw + gap), 720 + (r - (rows - 1) / 2) * (gw + gap), gw, gw)); });
+    }
+    S.st = sticker(root, S.sticker);
+    S.labels = (S.labels || []).map((t, i) => t ? tag(S.cards[i], t, 8, S.cards[i]._h - 66, 'yellow') : null);
+    S.labels.forEach((t) => t && (t.style.fontSize = '30px'));
+  },
+  draw(S, u, s) {
+    if (S.center) place(S.center, pop(s) * lerp(1, 1.05, u));
+    const span = S.stagger ?? 0.12;
+    S.cards.forEach((c, i) => place(c, pop(s, .15 + i * span), (i % 2 ? 3 : -3) * (1 - u)));
+    if (S.st) S.st.style.transform = `translateX(-50%) rotate(-3deg) scale(${pop(s, .05)})`;
+  },
+};
+
+// a photo that changes with an angle: a dial needle sweeps through `angles` keyframes, the photo is
+// the nearest of `images` {deg: src}; optional `axes` [label0, label90] readout of the mix
+KINDS.dial = {
+  build(S, root) {
+    const srcs = Object.entries(S.images).map(([a, src]) => [Number(a), src]);
+    S.srcs = srcs; S.c = card(root, srcs[0][1], W / 2, 690, S.width || 760);
+    S.imgs = srcs.map(([a, src]) => { const i = el('img', null, S.c); i.src = src;
+      Object.assign(i.style, { position: 'absolute', inset: 0, opacity: 0 }); return [a, i]; });
+    const svg = sv('svg', { width: 260, height: 260, viewBox: '-130 -130 260 260' }, root);
+    Object.assign(svg.style, { position: 'absolute', left: W / 2 + (S.width || 760) / 2 - 190 + 'px', top: 690 + S.c._h / 2 - 150 + 'px' });
+    sv('circle', { r: 110, fill: '#0b0b10', stroke: '#fff', 'stroke-width': 10 }, svg);
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; sv('line', { x1: 88 * Math.cos(a), y1: 88 * Math.sin(a), x2: 100 * Math.cos(a), y2: 100 * Math.sin(a), stroke: '#fff', 'stroke-width': 6 }, svg); }
+    S.needle = sv('line', { x1: 0, y1: 0, x2: 82, y2: 0, stroke: '#ffe14d', 'stroke-width': 16, 'stroke-linecap': 'round' }, svg);
+    sv('circle', { r: 16, fill: '#ff3d7f' }, svg);
+    S.svg = svg;
+    if (S.axes) { S.theta = el('div', 'chip small', root); S.theta.style.top = '150px'; S.theta.style.background = 'var(--cyan)';
+      S.mixc = el('div', 'chip small', root); S.mixc.style.top = '230px'; }
+    S.st = sticker(root, S.sticker);
+    S.lab = tagR(root, '', W / 2 + (S.width || 760) / 2 - 20, 690 + S.c._h / 2 + 100, 'yellow'); S.lab.style.fontSize = '40px';
+  },
+  draw(S, u, s) {
+    const deg = ((keys(S.angles, u) % 360) + 360) % 360;
+    place(S.c, pop(s) * lerp(1, 1.03, u)); S.svg.style.transform = `scale(${pop(s, .2)})`;
+    S.needle.setAttribute('transform', `rotate(${-deg})`);
+    const near = S.srcs.reduce((b, [a]) => { const d = Math.min(Math.abs(a - deg), 360 - Math.abs(a - deg)); return d < b[1] ? [a, d] : b; }, [0, 999])[0];
+    S.imgs.forEach(([a, i]) => i.style.opacity = a === near ? 1 : 0);
+    const label = (S.labels || {})[near];
+    S.lab.innerHTML = label || ''; S.lab.style.display = label ? '' : 'none';
+    if (S.axes) { const r = deg * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+      S.theta.innerHTML = `θ = ${Math.round(deg)}°`;
+      S.mixc.innerHTML = `${c.toFixed(2)}·${S.axes[0]} ${sn < 0 ? '−' : '+'} ${Math.abs(sn).toFixed(2)}·${S.axes[1]}`;
+      S.theta.style.transform = S.mixc.style.transform = `translateX(-50%) scale(${pop(s, .15)})`; }
+    if (S.st) S.st.style.transform = `translateX(-50%) rotate(-3deg) scale(${pop(s, .1)})`;
+  },
+};
+
+// arrows on a circle: two axes (with photos at their tips), a vector sweeping between them, a formula
+KINDS.circle = {
+  build(S, root) {
+    const svg = sv('svg', { width: 1080, height: 1100, viewBox: '-540 -560 1080 1100' }, root);
+    Object.assign(svg.style, { position: 'absolute', left: 0, top: 200 + 'px' });
+    sv('circle', { r: 330, fill: 'none', stroke: 'rgba(255,255,255,.85)', 'stroke-width': 6 }, svg);
+    sv('line', { x1: -380, y1: 0, x2: 380, y2: 0, stroke: 'rgba(255,255,255,.25)', 'stroke-width': 4 }, svg);
+    sv('line', { x1: 0, y1: -380, x2: 0, y2: 380, stroke: 'rgba(255,255,255,.25)', 'stroke-width': 4 }, svg);
+    S.ax = (S.axes || []).map((a, i) => { const g = sv('g', {}, svg), ang = (a.deg ?? i * 90) * Math.PI / 180;
+      const x = 330 * Math.cos(ang), y = -330 * Math.sin(ang), col = a.color || (i ? '#ff3d7f' : '#ffe14d');
+      g._line = sv('line', { x1: 0, y1: 0, x2: x, y2: y, stroke: col, 'stroke-width': 16, 'stroke-linecap': 'round' }, g);
+      if (a.image) { const im = sv('image', { href: a.image, x: x - 75 + (x > 1 ? 70 : 0), y: y - 75 - (y < -1 ? 70 : 0), width: 150, height: 150, preserveAspectRatio: 'xMidYMid slice' }, g);
+        im.setAttribute('clip-path', 'inset(0 round 18px)'); }
+      const t = sv('text', { x: x + (x > 1 ? 40 : 30), y: y + (y < -1 ? 60 : 70), fill: col, 'font-size': 46 }, g); t.textContent = a.label;
+      g._len = 330; return g; });
+    S.vec = sv('line', { x1: 0, y1: 0, x2: 330, y2: 0, stroke: '#29d3ff', 'stroke-width': 18, 'stroke-linecap': 'round', opacity: 0 }, svg);
+    S.dot = sv('circle', { r: 22, fill: '#29d3ff', opacity: 0 }, svg);
+    sv('circle', { r: 18, fill: '#29d3ff' }, svg);
+    S.svg = svg;
+    if (S.formula) { S.f = el('div', 'chip', root, S.formula); S.f.style.top = '1290px'; }
+    S.st = sticker(root, S.sticker);
+  },
+  draw(S, u, s) {
+    S.svg.style.transform = `scale(${lerp(.9, 1, ease(s / .5))})`; S.svg.style.opacity = ease(s / .3);
+    S.ax.forEach((g, i) => { const k = ease((s - .2 - i * .5) / .5); g.style.opacity = k; g.style.transform = `scale(${k})`; });
+    if (S.sweep) { const deg = keys(S.sweep, u), r = deg * Math.PI / 180, on = clamp((u - S.sweep[0][0]) / .05);
+      S.vec.setAttribute('x2', 330 * Math.cos(r)); S.vec.setAttribute('y2', -330 * Math.sin(r)); S.vec.setAttribute('opacity', on);
+      S.dot.setAttribute('cx', 330 * Math.cos(r)); S.dot.setAttribute('cy', -330 * Math.sin(r)); S.dot.setAttribute('opacity', on); }
+    if (S.f) S.f.style.transform = `translateX(-50%) scale(${pop(s, S.formula_at || .9)})`;
+    if (S.st) S.st.style.transform = `translateX(-50%) rotate(-3deg) scale(${pop(s, .05)})`;
+  },
+};
+
+// light mixing on the paper's images: t + k·r added as light (and optionally blended as finished photos)
+KINDS.mix = {
+  build(S, root) {
+    const w = 420, A = linear(S.t, w), B = linear(S.r, w), h = Math.min(A.h, B.h);
+    S.A = A; S.B = B; S.h = h;
+    const panels = S.panels || [{ mode: 'light', label: 'ADDED AS LIGHT' }];
+    const two = panels.length > 1, pw = two ? 500 : 620, ph = Math.round(pw * h / w), gap = 20;
+    const y0 = two ? 470 : 860;
+    S.cv = panels.map((p, i) => {
+      const cy = panels.length > 1 ? y0 + i * (ph + gap + 30) : y0;
+      const c = el('div', 'card', root); Object.assign(c.style, { left: (W - pw) / 2 + 'px', top: cy - (panels.length > 1 ? 0 : ph / 2) + 'px', width: pw + 'px', height: ph + 'px' });
+      if (two) { c.style.left = (i ? W / 2 + gap / 2 : W / 2 - pw - gap / 2) + 'px'; c.style.top = y0 + 'px'; }
+      const cv = el('canvas', null, c); cv.width = w; cv.height = h;
+      const t = tag(root, p.label, 0, 0, p.mode === 'light' ? 'cyan' : ''); t.style.fontSize = '36px';
+      t.style.left = (two ? (i ? W / 2 + gap / 2 : W / 2 - pw - gap / 2) : (W - pw) / 2) + 'px';
+      t.style.top = (two ? y0 + ph + 24 : cy + ph / 2 + 24) + 'px';
+      return { c, cv, g: cv.getContext('2d'), img: cv.getContext('2d').createImageData(w, h), mode: p.mode, t };
+    });
+    if (S.sources) { // small t and r cards above
+      S.srcCards = [card(root, S.t, W / 2 - 170, 300, 240), card(root, S.r, W / 2 + 170, 300, 240)];
+      S.plus = el('div', 'chip', root, '+'); S.plus.style.top = '255px'; S.plus.style.fontSize = '60px'; S.plus.style.padding = '0 26px';
+    }
+    S.k = el('div', 'chip small', root); S.k.style.top = (two ? y0 + ph + 110 : y0 + ph / 2 + 110) + 'px';
+    S.st = sticker(root, S.sticker);
+  },
+  draw(S, u, s) {
+    const stops = keys(S.stops || [[0, -5], [.8, 0], [1, 0]], u), k = 2 ** stops, a = k / (1 + k);
+    const { A, B, h } = S, n = A.w * h * 3;
+    S.cv.forEach((p, i) => {
+      const d = p.img.data;
+      for (let j = 0, q = 0; j < n; j += 3, q += 4) {
+        if (p.mode === 'light') { d[q] = enc(A.lin[j] + k * B.lin[j]); d[q + 1] = enc(A.lin[j + 1] + k * B.lin[j + 1]); d[q + 2] = enc(A.lin[j + 2] + k * B.lin[j + 2]); }
+        else { d[q] = 255 * ((1 - a) * A.disp[j] + a * B.disp[j]); d[q + 1] = 255 * ((1 - a) * A.disp[j + 1] + a * B.disp[j + 1]); d[q + 2] = 255 * ((1 - a) * A.disp[j + 2] + a * B.disp[j + 2]); }
+        d[q + 3] = 255;
+      }
+      p.g.putImageData(p.img, 0, 0);
+      place(p.c, pop(s, .1 + i * .15)); p.t.style.transform = `scale(${pop(s, .4 + i * .15)})`;
+    });
+    if (S.srcCards) { S.srcCards.forEach((c, i) => place(c, pop(s, i * .1), i ? 4 : -4)); S.plus.style.transform = `translateX(-50%) scale(${pop(s, .1)})`; }
+    S.k.innerHTML = `reflection ${stops >= -0.05 ? 'at full strength' : (stops > 0 ? '+' : '') + stops.toFixed(1) + ' stops'}`;
+    S.k.style.transform = `translateX(-50%) scale(${pop(s, .3)})`;
+    if (S.st) S.st.style.transform = `translateX(-50%) rotate(-3deg) scale(${pop(s, .05)})`;
+  },
+};
+
+// a pipeline as pills lighting up one by one; `hot` gets the badge
+KINDS.steps = {
+  build(S, root) {
+    const n = S.steps.length, top = 700 - (n * 110) / 2 + 60;
+    S.p = S.steps.map((t, i) => { const p = el('div', 'pill', root, `<b>${i + 1}</b>${t}`); p.style.top = top + i * 110 + 'px';
+      if (S.marks && S.marks[i]) el('span', 'mark', p, S.marks[i]); return p; });
+    S.st = sticker(root, S.sticker);
+  },
+  draw(S, u, s) {
+    const n = S.p.length, on = S.hot_at ?? .55;
+    S.p.forEach((p, i) => { const k = ease((u - i * (on - .1) / n) / .12); p.style.opacity = k * (u > on && i !== S.hot ? .45 : 1);
+      p.style.transform = `translateX(${(1 - k) * -80}px) scale(${i === S.hot && u > on ? back(clamp((u - on) / .12)) * .06 + 1 : 1})`;
+      p.classList.toggle('hot', i === S.hot && u > on); });
+    if (S.st) S.st.style.transform = `translateX(-50%) rotate(-3deg) scale(${pop(s, .05)})`;
+  },
+};
+
+KINDS.end = KINDS.grid;
+
+// ---- captions, background, frame ------------------------------------------------------------------
+function drawBg(t) {
+  const g = document.getElementById('bg').getContext('2d'), a = t * .25;
+  if (T.layout === 'split') { g.clearRect(0, 0, 1080, 1920); g.save(); g.beginPath(); g.rect(0, 0, 1080, 960); g.clip(); }
+  const gr = g.createLinearGradient(0, 0, 1080 * Math.cos(a) * .3, 1920);
+  gr.addColorStop(0, '#0d1b4a'); gr.addColorStop(.55, '#2a0f45'); gr.addColorStop(1, '#4a1040');
+  g.fillStyle = gr; g.fillRect(0, 0, 1080, 1920);
+  const rg = g.createRadialGradient(540 + 200 * Math.sin(a), 700, 50, 540, 700, 900);
+  rg.addColorStop(0, 'rgba(80,120,255,.22)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0, 0, 1080, 1920);
+  if (T.layout === 'split') g.restore();
+}
+
+async function setup(tl) {
+  T = tl;
+  if (tl.layout === 'split') { document.documentElement.classList.add('split'); document.body.classList.add('split'); }
+  await document.fonts.ready;
+  const srcs = new Set();
+  const walk = (v) => { if (typeof v === 'string' && /^(file|data|https?):/.test(v)) srcs.add(v); else if (v && typeof v === 'object') Object.values(v).forEach(walk); };
+  tl.scenes.forEach(walk);
+  await Promise.all([...srcs].map(load));
+  const host = document.getElementById('scenes');
+  tl.scenes.forEach((S) => { S.root = el('div', 'scene', host); KINDS[S.kind].build(S, S.root); });
+  document.getElementById('cite').textContent = tl.cite || '';
+  return true;
+}
+
+function frame(t) {
+  drawBg(t);
+  document.getElementById('bar').style.width = (100 * t / T.duration) + '%';
+  T.scenes.forEach((S) => {
+    const on = t >= S.start && t < S.end; S.root.style.display = on ? 'block' : 'none';
+    if (on) KINDS[S.kind].draw(S, (t - S.start) / (S.end - S.start), t - S.start);
+  });
+  const ch = T.chunks.filter((c) => c.start <= t + 1e-6 && t < c.end).pop();
+  const cap = document.getElementById('caption');
+  cap.innerHTML = ch ? ch.words.filter((w) => w.start <= t + 0.02).map((w) => `<span class="w${w.hi ? ' hi' : ''}">${w.text}</span>`).join(' ') : '';
+  const last = T.scenes[T.scenes.length - 1];
+  document.getElementById('cite').style.opacity = t >= last.start ? 1 : 0;
+}
+</script>
+</body>
+</html>

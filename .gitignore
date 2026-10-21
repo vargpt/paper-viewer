@@ -9,5 +9,4 @@ traces/live_*.jsonl
 /outputs/
 /multiagent/work/
 /multiagent/prototype/
-/multiagent/tiktok/
 .DS_Store

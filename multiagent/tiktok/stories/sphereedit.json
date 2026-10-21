@@ -1,0 +1,196 @@
+{
+  "paper": "SphereEdit: Spherical Semantic Editing in Diffusion Models (Konate et al., WACV 2026)",
+  "figures": "sphereedit",
+  "cite": "Konate et al. · SphereEdit · WACV 2026",
+  "voice_style": "Upbeat, playful TikTok explainer: quick and punchy, a little amazed, smiling while talking, clear on the highlighted words.",
+  "music_prompt": "Bright, bouncy lo-fi electronic beat for a playful science short, light plucks and claps, 120 bpm, instrumental, no vocals.",
+  "scenes": [
+    {
+      "say": "What if editing a photo was just... *turning* a *dial*?",
+      "kind": "dial",
+      "sticker": "SPHEREEDIT",
+      "images": {
+        "0": "p1-3.jpg",
+        "45": "p1-2.jpg",
+        "90": "p1-4.jpg",
+        "135": "p1-5.jpg",
+        "180": "p1-9.jpg",
+        "225": "p1-8.jpg",
+        "270": "p1-7.jpg",
+        "315": "p1-6.jpg"
+      },
+      "labels": {
+        "0": "OLD",
+        "90": "ASIAN",
+        "180": "YOUNGER"
+      },
+      "angles": [
+        [
+          0,
+          45
+        ],
+        [
+          0.3,
+          45
+        ],
+        [
+          1,
+          405
+        ]
+      ]
+    },
+    {
+      "say": "Each edit is an *arrow*: the model's guess *with* the word, minus *without* it.",
+      "kind": "circle",
+      "axes": [
+        {
+          "label": "OLD",
+          "deg": 0,
+          "image": "p1-3.jpg"
+        },
+        {
+          "label": "ASIAN",
+          "deg": 90,
+          "image": "p1-4.jpg"
+        }
+      ],
+      "formula": "edit = ε(x | “old”) − ε(x | ∅)",
+      "formula_at": 1.4
+    },
+    {
+      "say": "Make every arrow the *same length*, and mixing edits is just an *angle*.",
+      "kind": "dial",
+      "images": {
+        "0": "p1-3.jpg",
+        "45": "p1-2.jpg",
+        "90": "p1-4.jpg",
+        "135": "p1-5.jpg",
+        "180": "p1-9.jpg",
+        "225": "p1-8.jpg",
+        "270": "p1-7.jpg",
+        "315": "p1-6.jpg"
+      },
+      "labels": {
+        "0": "OLD",
+        "90": "ASIAN"
+      },
+      "axes": [
+        "OLD",
+        "ASIAN"
+      ],
+      "angles": [
+        [
+          0,
+          0
+        ],
+        [
+          0.15,
+          0
+        ],
+        [
+          0.85,
+          90
+        ],
+        [
+          1,
+          90
+        ]
+      ]
+    },
+    {
+      "say": "Spin it halfway round, and old runs *backwards*: *younger*!",
+      "kind": "dial",
+      "images": {
+        "0": "p1-3.jpg",
+        "45": "p1-2.jpg",
+        "90": "p1-4.jpg",
+        "135": "p1-5.jpg",
+        "180": "p1-9.jpg",
+        "225": "p1-8.jpg",
+        "270": "p1-7.jpg",
+        "315": "p1-6.jpg"
+      },
+      "labels": {
+        "0": "OLD",
+        "90": "ASIAN",
+        "180": "YOUNGER"
+      },
+      "axes": [
+        "OLD",
+        "ASIAN"
+      ],
+      "angles": [
+        [
+          0,
+          0
+        ],
+        [
+          0.15,
+          0
+        ],
+        [
+          0.75,
+          180
+        ],
+        [
+          1,
+          180
+        ]
+      ]
+    },
+    {
+      "say": "*Attention masks* keep the glasses on the eyes, not the *whole face*.",
+      "kind": "wipe",
+      "before": "one-step-q10.png",
+      "after": "one-step-q08.png",
+      "label_before": "NO MASK ✗",
+      "label_after": "MASKED ✓"
+    },
+    {
+      "say": "It works on *cars*, *dogs*, *cats*, even *paintings*.",
+      "kind": "grid",
+      "cols": 2,
+      "size": 270,
+      "stagger": 0.08,
+      "images": [
+        "p1-10.jpg",
+        "p1-11.jpg",
+        "p1-15.jpg",
+        "p1-16.jpg",
+        "p1-20.jpg",
+        "p1-19.jpg",
+        "p1-24.jpg",
+        "p1-22.jpg"
+      ],
+      "labels": [
+        "BEFORE",
+        "AFTER",
+        "BEFORE",
+        "AFTER",
+        "BEFORE",
+        "AFTER",
+        "BEFORE",
+        "AFTER"
+      ]
+    },
+    {
+      "say": "No retraining. Just *spin the dial*.",
+      "kind": "end",
+      "sticker": "SPHEREEDIT",
+      "cols": 3,
+      "size": 290,
+      "stagger": 0.05,
+      "images": [
+        "p1-3.jpg",
+        "p1-16.jpg",
+        "p1-11.jpg",
+        "p1-19.jpg",
+        "p1-1.jpg",
+        "p1-22.jpg",
+        "p1-9.jpg",
+        "p1-14.jpg",
+        "p1-4.jpg"
+      ]
+    }
+  ]
+}

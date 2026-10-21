@@ -1,0 +1,13 @@
+{
+  "story": "stories/sphereedit.json",
+  "duration": 29.702,
+  "script": [
+    "What if editing a photo was just... turning a dial?",
+    "Each edit is an arrow: the model's guess with the word, minus without it.",
+    "Make every arrow the same length, and mixing edits is just an angle.",
+    "Spin it halfway round, and old runs backwards: younger!",
+    "Attention masks keep the glasses on the eyes, not the whole face.",
+    "It works on cars, dogs, cats, even paintings.",
+    "No retraining. Just spin the dial."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "story": "stories/reflection.json",
+  "duration": 30.573,
+  "script": [
+    "See that green lawn? It's not in the room, it's a reflection.",
+    "This AI peels it off into its own photo.",
+    "It learned from a million fakes, made by adding light like real glass.",
+    "The trick: mix in RAW, before the camera makes it pretty.",
+    "Light floods the shadows and skips the highlights. Old fakes just blended.",
+    "Trained only on fakes, it cleans real windows.",
+    "Full resolution. No reflections."
+  ]
+}

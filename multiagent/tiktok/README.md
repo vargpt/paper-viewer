@@ -67,6 +67,22 @@ screenshots), voice (~$0.05), music ($0.04) and b-roll ($0.10/s with Veo 3.1 Fas
 two 8 s shots). The `.json` has the breakdown OpenRouter reported. Takes about 5–10 minutes, most of
 it the b-roll and drawing ~600 frames twice.
 
+## Fun version (animated, from the paper's own images)
+
+`fun.py` makes a different kind of short: instead of filming the page, it animates the paper's images
+(a dial that turns a face older or younger, before/after wipes, pop-in grids, an arrow diagram, light
+mixed live on the paper's photos, a pipeline lighting up), with bold word-by-word captions. A story in
+`stories/<name>.json` says what the narrator says in each scene (`*words*` are highlighted) and which
+scene kind shows it; `stories/<name>/` holds the images it uses. Scene kinds are in `fun.html`.
+
+```bash
+python multiagent/tiktok/fun.py multiagent/tiktok/stories/reflection.json --stills   # voice + one still per scene
+python multiagent/tiktok/fun.py multiagent/tiktok/stories/reflection.json            # the video: outputs/reflection_fun.mp4
+```
+
+It never overwrites a video (a second run writes `<name>_fun2.mp4`). Voice and music go through
+OpenRouter as above (about $0.15 a video); the voice is sped up (at most 1.15x) to fit `seconds` (28).
+
 ## Files
 
 - `tiktok.py`: the pipeline and CLI.

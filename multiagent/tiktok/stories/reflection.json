@@ -1,0 +1,156 @@
+{
+  "paper": "Removing Reflections from RAW Photos (Kee, Pikielny, Blackburn-Matzen, Levoy; Adobe)",
+  "figures": "reflection",
+  "cite": "Kee, Pikielny, Blackburn-Matzen & Levoy · Adobe · arXiv 2404.14414",
+  "voice_style": "Upbeat, playful TikTok explainer: quick and punchy, a little amazed, smiling while talking, clear on the highlighted words.",
+  "music_prompt": "Bright, bouncy lo-fi electronic beat for a playful science short, light plucks and claps, 120 bpm, instrumental, no vocals.",
+  "scenes": [
+    {
+      "say": "See that *green lawn*? It's not in the room, it's a *reflection*.",
+      "kind": "wipe",
+      "sticker": "REFLECTION REMOVER",
+      "before": "p1-13.jpg",
+      "after": "p1-14.jpg",
+      "label_before": "THROUGH GLASS",
+      "label_after": "CLEANED",
+      "path": [
+        [
+          0,
+          1
+        ],
+        [
+          0.45,
+          1
+        ],
+        [
+          0.85,
+          0.5
+        ],
+        [
+          1,
+          0.5
+        ]
+      ]
+    },
+    {
+      "say": "This AI *peels it off* into its own photo.",
+      "kind": "card",
+      "image": "p1-14.jpg",
+      "then": "p1-10.jpg",
+      "swap": 0.35,
+      "tag": "THE PHOTO",
+      "tag_color": "cyan",
+      "tag2": "THE REFLECTION",
+      "tag2_color": ""
+    },
+    {
+      "say": "It learned from *a million* fakes, made by *adding light* like real glass.",
+      "kind": "mix",
+      "t": "p6-6.jpg",
+      "r": "p6-7.jpg",
+      "sources": true,
+      "panels": [
+        {
+          "mode": "light",
+          "label": "FAKE REFLECTION"
+        }
+      ],
+      "stops": [
+        [
+          0,
+          -6
+        ],
+        [
+          0.2,
+          -6
+        ],
+        [
+          0.85,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ]
+    },
+    {
+      "say": "The trick: mix in *RAW*, before the camera makes it pretty.",
+      "kind": "steps",
+      "hot": 3,
+      "hot_at": 0.55,
+      "steps": [
+        "Linearize",
+        "Demosaic",
+        "Black level",
+        "To XYZ",
+        "White balance",
+        "To RGB",
+        "Tone map",
+        "Gamma"
+      ],
+      "marks": [
+        "",
+        "",
+        "",
+        "MIX HERE ✓",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "say": "Light floods the *shadows* and skips the *highlights*. Old fakes just blended.",
+      "kind": "mix",
+      "t": "p6-6.jpg",
+      "r": "p6-7.jpg",
+      "panels": [
+        {
+          "mode": "light",
+          "label": "AS LIGHT ✓"
+        },
+        {
+          "mode": "blend",
+          "label": "BLENDED ✗"
+        }
+      ],
+      "stops": [
+        [
+          0,
+          -4
+        ],
+        [
+          0.6,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ]
+    },
+    {
+      "say": "Trained only on fakes, it cleans *real* windows.",
+      "kind": "wipe",
+      "before": "p8-24.jpg",
+      "after": "p8-32.jpg",
+      "label_before": "THROUGH GLASS",
+      "label_after": "CLEANED"
+    },
+    {
+      "say": "Full resolution. *No reflections.*",
+      "kind": "end",
+      "sticker": "NO MORE REFLECTIONS",
+      "cols": 2,
+      "size": 400,
+      "stagger": 0.06,
+      "images": [
+        "p1-14.jpg",
+        "p1-5.jpg",
+        "p8-32.jpg",
+        "p7-2.jpg"
+      ]
+    }
+  ]
+}
