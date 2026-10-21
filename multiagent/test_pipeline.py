@@ -79,7 +79,7 @@ def _plan() -> dict:
 
 def test_pipeline() -> None:
     multiagent.Team = StubTeam
-    cfg = multiagent.Config(rounds=2)  # defaults: all six readers, peer review on
+    cfg = multiagent.Config(rounds=2, readers=[p.id for p in P.PERSONAS])  # all six readers, peer review on
     with tempfile.TemporaryDirectory() as tmp:
         out, work = Path(tmp) / "out", Path(tmp) / "work"
         meta = asyncio.run(multiagent.run_one(PAPER, "stub", out, work, cfg, fresh=False))

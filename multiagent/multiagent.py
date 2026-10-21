@@ -48,6 +48,8 @@ DEFAULT_MODEL = {"openrouter": "anthropic/claude-opus-5.5", "subscription": "cla
 LOOK_TOOLS = ["Read", "Glob", "Grep"]
 EDIT_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep"]
 HERO_FIELDS = list(P.HERO["properties"])
+READER_MODEL = {"openrouter": "anthropic/claude-sonnet-5.5", "subscription": "claude-sonnet-5-5", "api-key": "claude-sonnet-5-5"}
+DEFAULT_READERS = ["kid", "teen", "professor", "senior"]
 
 
 @dataclass
@@ -55,9 +57,9 @@ class Config:
     model: str = DEFAULT_MODEL["openrouter"]
     reader_model: str | None = None
     effort: str = "high"
-    rounds: int = 2
-    readers: list[str] = field(default_factory=lambda: [p.id for p in P.PERSONAS])
-    max_experts: int = 5
+    rounds: int = 1
+    readers: list[str] = field(default_factory=lambda: list(DEFAULT_READERS))
+    max_experts: int = 3
     max_sections: int = 8
     peer_review: bool = True
     parallel: int = 4
@@ -593,11 +595,13 @@ def add_options(parser: argparse.ArgumentParser) -> None:
     ids = ", ".join(p.id for p in P.PERSONAS)
     parser.add_argument("--model", help="model for the editor, experts and fact-checker (default anthropic/claude-opus-5.5 on "
                         "OpenRouter, claude-opus-5-5 otherwise)")
-    parser.add_argument("--reader-model", help="model for the simulated readers (default: --model)")
+    parser.add_argument("--reader-model", help="model for the simulated readers (default Sonnet 5.5: anthropic/claude-sonnet-5.5 "
+                        "on OpenRouter, claude-sonnet-5-5 otherwise)")
     parser.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
-    parser.add_argument("--rounds", type=int, default=2, help="review-and-revise rounds (default 2)")
-    parser.add_argument("--readers", default="all", help=f"comma-separated simulated readers: {ids} (default all)")
-    parser.add_argument("--max-experts", type=int, default=5, help="largest team the editor may pick (default 5)")
+    parser.add_argument("--rounds", type=int, default=1, help="review-and-revise rounds (default 1)")
+    parser.add_argument("--readers", default="default", help=f"comma-separated simulated readers from: {ids}; or 'all' "
+                        f"(default: {','.join(DEFAULT_READERS)})")
+    parser.add_argument("--max-experts", type=int, default=3, help="largest team the editor may pick (default 3)")
     parser.add_argument("--no-peer-review", action="store_true", help="skip the experts' reviews of each other's sections")
     parser.add_argument("--parallel", type=int, default=4, help="agents running at the same time (default 4)")
     parser.add_argument("--quick", action="store_true", help="a cheaper run: 1 round, 3 readers, at most 3 experts, no peer review")
@@ -610,9 +614,11 @@ def add_options(parser: argparse.ArgumentParser) -> None:
 
 
 def config_from(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Config:
-    cfg = Config(model=args.model or DEFAULT_MODEL[args.auth], reader_model=args.reader_model, effort=args.effort, rounds=args.rounds,
+    cfg = Config(model=args.model or DEFAULT_MODEL[args.auth], reader_model=args.reader_model or READER_MODEL[args.auth], effort=args.effort, rounds=args.rounds,
                  max_experts=args.max_experts, peer_review=not args.no_peer_review, parallel=args.parallel, auth=args.auth)
-    if args.readers != "all":
+    if args.readers == "all":
+        cfg.readers = [p.id for p in P.PERSONAS]
+    elif args.readers != "default":
         cfg.readers = [r.strip() for r in args.readers.split(",") if r.strip()]
         unknown = set(cfg.readers) - {p.id for p in P.PERSONAS}
         if unknown:
@@ -622,7 +628,7 @@ def config_from(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Co
         cfg.max_experts = min(cfg.max_experts, 3)
         cfg.max_sections = 6
         cfg.peer_review = False
-        if args.readers == "all":
+        if args.readers == "default":
             cfg.readers = ["kid", "grad", "professor"]
     return cfg
 

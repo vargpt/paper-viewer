@@ -8,7 +8,7 @@ team of agents:
 paper
   │
   ▼
-lead editor ─── reads the paper, picks 3–5 paper-specific experts, plans the page
+lead editor ─── reads the paper, picks 3 paper-specific experts, plans the page
   │
   ▼
 experts, in parallel ─── write their sections: explanations, interactive visuals, toy examples
@@ -85,18 +85,18 @@ the run over.
 | option | default | |
 |---|---|---|
 | `--model` | `anthropic/claude-opus-5.5` (`claude-opus-5-5` without OpenRouter) | editor, experts, fact-checker |
-| `--reader-model` | same as `--model` | simulated readers (e.g. `anthropic/claude-sonnet-5.5` to save cost) |
+| `--reader-model` | Sonnet 5.5 (`anthropic/claude-sonnet-5.5`) | simulated readers; cheaper than Opus, they don't write anything |
 | `--effort` | `high` | reasoning effort for every agent |
-| `--rounds` | `2` | review-and-revise rounds |
-| `--readers` | all six | any of `kid,teen,grad,pro,professor,senior` |
-| `--max-experts` | `5` | the editor picks 3 to this many |
+| `--rounds` | `1` | review-and-revise rounds |
+| `--readers` | `kid,teen,professor,senior` | any of `kid,teen,grad,pro,professor,senior`, or `all` |
+| `--max-experts` | `3` | the editor picks up to this many (at least 3, or this many if fewer) |
 | `--no-peer-review` | off | skip the experts' reviews of each other |
 | `--parallel` | `4` | agents running at once |
-| `--quick` | | 1 round, `kid,grad,professor`, ≤3 experts, ≤6 sections, no peer review |
+| `--quick` | | `kid,grad,professor` readers, ≤6 sections, no peer review |
 | `--out` / `--work` | `multiagent/outputs` / `multiagent/work` | final pages / run workspaces |
 
-**Cost.** A default run is roughly 50–70 agent sessions (a `--quick` run about 30) and takes
-on the order of an hour. The JSON next to each page reports the cost as Claude Code estimates it at
+**Cost.** A default run (3 experts, 4 readers, 1 round) is about 30 agent sessions and takes
+about 30–40 minutes. The JSON next to each page reports the cost as Claude Code estimates it at
 Anthropic list prices (`cost_usd_api_equivalent`) and the tokens; OpenRouter's dashboard has the
 exact bill.
 
