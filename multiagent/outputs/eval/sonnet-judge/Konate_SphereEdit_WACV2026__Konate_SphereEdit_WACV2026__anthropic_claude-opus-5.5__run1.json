@@ -1,0 +1,55 @@
+{
+  "paper_id": "Konate_SphereEdit_WACV2026",
+  "paper_title": "SphereEdit: Spherical Semantic Editing in Diffusion Models",
+  "html_path": "/tmp/claude-28370/-local-home-skonate-code-AgenticAI-paper-viewer/d9f6e789-f677-4108-ac6f-842519dcbef9/scratchpad/stripped/Konate_SphereEdit_WACV2026__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-sonnet-5.5",
+  "hallucinations": {
+    "count": 0,
+    "major_count": 0,
+    "minor_count": 0,
+    "items": []
+  },
+  "consistency": {
+    "score": 9,
+    "rationale": "The page faithfully covers the problem (entangled, leaky edits) and the full method: unit-norm attribute directions from the difference between conditioned and null noise predictions, cross-attention masks, overlap-aware masked Gram-Schmidt, and spherical coefficients cos θ, sin θ cos φ, sin θ sin φ. It also covers the settings (SD v1.5, 50 steps, q = 0.8, seed 0, about 12 s on an L40). Every Table 1 number I checked is correct, including the '6 of 8 best, 2 second' count, the LPIPS exception behind SEGA, and the 0.0012 CLIP-T gap to TurboEdit. Limitations are covered well: up to three attributes, ambiguous antipodal semantics for race and medical imaging, a single seed, no variance, and no CelebA-HQ numbers. It also points out internal inconsistencies in the paper (the θ = φ = π/2 default versus Eq. 4, and the q direction in the Fig. 5 caption versus the text) and labels toys as toys. Small omissions: the 1D/2D/3D unification framing, the temporal attribute scheduling, and the related-work positioning get little space. The page's own analysis is flagged as such.",
+    "missing_key_points": [
+      "The 1D antipodal / 2D angular / 3D spherical unification is not framed explicitly as a contribution",
+      "Temporal scheduling of attributes (e.g. glasses only at later steps) is mentioned only briefly",
+      "Related-work positioning (DiffusionCLIP, Riemannian and isometric latent geometry) is mostly omitted",
+      "The Fig. 4 ablation is covered only briefly"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 4,
+        "rationale": "It has a simple kid box and a joystick-and-stencil analogy, plus cartoon-face toys with before/after buttons. Most of the page is far too dense and technical for a 5-year-old, so it would need heavy adult mediation."
+      },
+      "15": {
+        "score": 7,
+        "rationale": "The arrow, dial and stencil analogies are intuitive, the interactive toys help, and key terms are defined in tooltips. The equations and metric discussion get heavy, but the 'explain like I'm 8' boxes and the plain-language tl;dr lines keep the gist accessible."
+      },
+      "25": {
+        "score": 9,
+        "rationale": "Accurate, well-structured, and handles the method, Table 1 and the caveats well. Interactive toys, a data table, deeper-dive equations and honest notes on the paper's ambiguities make it excellent for a graduate reader."
+      },
+      "35": {
+        "score": 9,
+        "rationale": "Quick takeaways in the hero, an expert summary, a clear results chart and a limitations section deliver the key points fast. The critical notes on a single seed and no variance add trust for an expert-adjacent reader."
+      },
+      "45": {
+        "score": 8,
+        "rationale": "It gives practical context (creative design, try-on), clear caveats, and strong trust signals: the page marks which figures are from the paper and which are toys. Some of the technical depth is more than a manager needs, but the key sections are easy to skim."
+      },
+      "55": {
+        "score": 7,
+        "rationale": "Plain-language summaries, a glossary and tooltips help, as do the font-size controls. Terms like cross-attention, DDIM inversion and Gram-Schmidt remain heavy, and the page is long and interactive-heavy for a less AI-familiar reader."
+      },
+      "65": {
+        "score": 7,
+        "rationale": "The structure is clear, with a table of contents, adjustable text size and a glossary, and the callouts are readable. Dense sections, jargon and many interactive widgets could overwhelm, though the plain tl;dr lines and caveats give real-world relevance."
+      }
+    },
+    "mean_score": 7.29
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "paper_id": "2404.14414",
+  "judge": "anthropic/claude-sonnet-5.5",
+  "baseline_html": "baseline/outputs/without_agent/2404.14414__anthropic_claude-opus-5.5__run1.html",
+  "candidate_html": "multiagent/outputs/before-visuals/2404.14414__anthropic_claude-opus-5.5__run1.html",
+  "overall": {
+    "verdict": "candidate",
+    "order_baseline_first": "candidate",
+    "order_candidate_first": "candidate"
+  },
+  "overall_why": {
+    "baseline_first": "PAGE_2 is more approachable and better scaffolded for non-experts and more careful about what the numbers mean, while PAGE_1 is accurate but dense and technical.",
+    "candidate_first": "Page 1 is more approachable and layered, with accurate caveats, tooltips and a glossary, whereas Page 2 is faithful but jargon-heavy with no entry point for beginners."
+  },
+  "by_age": {
+    "5": {
+      "verdict": "candidate",
+      "order_baseline_first": "candidate",
+      "order_candidate_first": "candidate",
+      "why_baseline_first": "PAGE_2 opens with an In kid words box and an Explain it like I'm 8 projector analogy, while PAGE_1 has no child-level explanation at all.",
+      "why_candidate_first": "Page 1 opens with a kid-words box about a ghost picture and a two-slide-projector analogy, while Page 2 has nothing written for a young child."
+    },
+    "15": {
+      "verdict": "candidate",
+      "order_baseline_first": "candidate",
+      "order_candidate_first": "candidate",
+      "why_baseline_first": "PAGE_2 layers the story with a tl;dr per chapter, tooltips and collapsible deeper sections, so a teen can follow the idea without wading through Fresnel formulas that PAGE_1 puts inline.",
+      "why_candidate_first": "Page 1 layers a kid version, a short version and optional deeper boxes, with toy sliders and tooltips defining terms like white balance and tone mapping, whereas Page 2 goes straight into ACR steps and Fresnel formulas."
+    },
+    "25": {
+      "verdict": "candidate",
+      "order_baseline_first": "candidate",
+      "order_candidate_first": "candidate",
+      "why_baseline_first": "PAGE_2 gives clear plain-language chapters with honest caveats, such as that the end-to-end upsampler gain is small, whereas PAGE_1 is accurate but dense with equations and hyperparameters.",
+      "why_candidate_first": "Page 1 gives a clear one-sentence summary per chapter, flags toy examples versus paper results, and supplies a glossary, so a non-expert follows the story more easily."
+    },
+    "35": {
+      "verdict": "candidate",
+      "order_baseline_first": "candidate",
+      "order_candidate_first": "candidate",
+      "why_baseline_first": "PAGE_2 moves from a plain problem statement through toy demos to evidence and limits, with technical depth hidden in expandable sections.",
+      "why_candidate_first": "Page 1 explains scoring terms such as control and improvement over control in plain language and is honest about caveats, such as the small end-to-end upsampling gain and no real-photo benchmark."
+    },
+    "45": {
+      "verdict": "candidate",
+      "order_baseline_first": "candidate",
+      "order_candidate_first": "candidate",
+      "why_baseline_first": "PAGE_2 has a glossary, hover definitions, and a size control, and keeps the key results prominent without a wall of formulas.",
+      "why_candidate_first": "Page 1 has adjustable text size, tooltips and a glossary, and its tl;dr lines make the long content easier to navigate than Page 2's dense dark-theme equation sections."
+    },
+    "55": {
+      "verdict": "candidate",
+      "order_baseline_first": "candidate",
+      "order_candidate_first": "candidate",
+      "why_baseline_first": "PAGE_2 is easier to read with adjustable text size, a glossary, and an explicit note that scores come from simulated test sets, while PAGE_1 expects comfort with SSIM, PSNR and matrices.",
+      "why_candidate_first": "Page 1 is well organized with collapsible depth and clear caveats, while Page 2 piles formulas such as the Fresnel and defocus equations and ACR steps onto a general reader."
+    },
+    "65": {
+      "verdict": "candidate",
+      "order_baseline_first": "candidate",
+      "order_candidate_first": "candidate",
+      "why_baseline_first": "PAGE_2 offers a readable light theme, bigger-text buttons, a glossary and one-sentence summaries per chapter, whereas PAGE_1 is a dark, dense page full of formulas and parameters.",
+      "why_candidate_first": "Page 1 uses analogies, a glossary and larger-text controls, while Page 2's small muted text on a dark background and heavy jargon are harder for this reader."
+    }
+  },
+  "unsupported_claims_reported": {
+    "baseline": [
+      "The page claims that a model trained on these simulations works on real photos with no fine-tuning as a general result, but the paper supports this only for the authors' own RAW photos and three ground-truth scenes.",
+      "The page says the ghost-reflection model assumes perfectly parallel panes and attributes that as a limitation, which the paper mentions only as a modeling assumption and not as an observed failure.",
+      "The page lists Egyptian tablet color improvement as a context finding, though the paper only gives this as a qualitative figure observation, not a measured result.",
+      "The claim that Generic super-resolution models (SUPIR, Real-ESRGAN) score below even the do nothing control on SSIM is unsupported: SUPIR SSIM_R is 56.8 and RESRGan SSIM_R 53.6, both below control 64.5, but SSIM_T of 64.6 and 65.6 is below control 86.3 while Bicubic SSIM_R beats control, so the blanket claim is only partly right.",
+      "The statement that Ours+rnd is significantly worse than the real context cites p<1.7e-11, but the paper attaches that p-value to the comparison of Ours versus Ours+rnd, so the attribution is questionable.",
+      "The phrase that the upsampler uses 29% fewer parameters than V-DESIRR appears only in a supplementary figure caption and is presented as a headline result, though it is supported."
+    ],
+    "candidate": [
+      "The page says the lab's Fresnel value with kappa 1.5 gives about -4.6 stops at 0 degrees and -4.3 at 45 degrees, which is its own calculation and not in the paper.",
+      "The page says that removing only the linear (gamma-free) mixing is about as damaging as All+G, and reads the Table 1 Gamma row as +70 to +21, interpreting the ablation in a way the paper does not state.",
+      "The page gives a fixed formula for the 8-bit blend weight w equals alpha to the power 1/2.2 as a stand-in for prior methods, which is not from the paper.",
+      "The page claims DSRNet is worse than doing nothing on the clean layer in Figure 7, comparing 0.939 with 0.979, which the paper does not state.",
+      "The ablation text says removing only the linear gamma-free mixing is about as damaging as All+G (+70 to +21); the paper's Table 1 labels the gamma ablation as compressing t and r before compositing, so this is a slightly loose reading but is mostly supported.",
+      "The claim that the context photo helps because saturated sky colors are recovered, and that this leaves reflected cars or hurts the clean layer, goes a bit beyond the paper, which only says the authors believe this for specific examples."
+    ]
+  },
+  "raw": {
+    "baseline_first": {
+      "age_5_winner": "2",
+      "age_5_why": "PAGE_2 opens with an In kid words box and an Explain it like I'm 8 projector analogy, while PAGE_1 has no child-level explanation at all.",
+      "age_15_winner": "2",
+      "age_15_why": "PAGE_2 layers the story with a tl;dr per chapter, tooltips and collapsible deeper sections, so a teen can follow the idea without wading through Fresnel formulas that PAGE_1 puts inline.",
+      "age_25_winner": "2",
+      "age_25_why": "PAGE_2 gives clear plain-language chapters with honest caveats, such as that the end-to-end upsampler gain is small, whereas PAGE_1 is accurate but dense with equations and hyperparameters.",
+      "age_35_winner": "2",
+      "age_35_why": "PAGE_2 moves from a plain problem statement through toy demos to evidence and limits, with technical depth hidden in expandable sections.",
+      "age_45_winner": "2",
+      "age_45_why": "PAGE_2 has a glossary, hover definitions, and a size control, and keeps the key results prominent without a wall of formulas.",
+      "age_55_winner": "2",
+      "age_55_why": "PAGE_2 is easier to read with adjustable text size, a glossary, and an explicit note that scores come from simulated test sets, while PAGE_1 expects comfort with SSIM, PSNR and matrices.",
+      "age_65_winner": "2",
+      "age_65_why": "PAGE_2 offers a readable light theme, bigger-text buttons, a glossary and one-sentence summaries per chapter, whereas PAGE_1 is a dark, dense page full of formulas and parameters.",
+      "overall_winner": "2",
+      "overall_why": "PAGE_2 is more approachable and better scaffolded for non-experts and more careful about what the numbers mean, while PAGE_1 is accurate but dense and technical.",
+      "unsupported_page_1": [
+        "The page claims that a model trained on these simulations works on real photos with no fine-tuning as a general result, but the paper supports this only for the authors' own RAW photos and three ground-truth scenes.",
+        "The page says the ghost-reflection model assumes perfectly parallel panes and attributes that as a limitation, which the paper mentions only as a modeling assumption and not as an observed failure.",
+        "The page lists Egyptian tablet color improvement as a context finding, though the paper only gives this as a qualitative figure observation, not a measured result."
+      ],
+      "unsupported_page_2": [
+        "The page says the lab's Fresnel value with kappa 1.5 gives about -4.6 stops at 0 degrees and -4.3 at 45 degrees, which is its own calculation and not in the paper.",
+        "The page says that removing only the linear (gamma-free) mixing is about as damaging as All+G, and reads the Table 1 Gamma row as +70 to +21, interpreting the ablation in a way the paper does not state.",
+        "The page gives a fixed formula for the 8-bit blend weight w equals alpha to the power 1/2.2 as a stand-in for prior methods, which is not from the paper.",
+        "The page claims DSRNet is worse than doing nothing on the clean layer in Figure 7, comparing 0.939 with 0.979, which the paper does not state."
+      ]
+    },
+    "candidate_first": {
+      "age_5_winner": "1",
+      "age_5_why": "Page 1 opens with a kid-words box about a ghost picture and a two-slide-projector analogy, while Page 2 has nothing written for a young child.",
+      "age_15_winner": "1",
+      "age_15_why": "Page 1 layers a kid version, a short version and optional deeper boxes, with toy sliders and tooltips defining terms like white balance and tone mapping, whereas Page 2 goes straight into ACR steps and Fresnel formulas.",
+      "age_25_winner": "1",
+      "age_25_why": "Page 1 gives a clear one-sentence summary per chapter, flags toy examples versus paper results, and supplies a glossary, so a non-expert follows the story more easily.",
+      "age_35_winner": "1",
+      "age_35_why": "Page 1 explains scoring terms such as control and improvement over control in plain language and is honest about caveats, such as the small end-to-end upsampling gain and no real-photo benchmark.",
+      "age_45_winner": "1",
+      "age_45_why": "Page 1 has adjustable text size, tooltips and a glossary, and its tl;dr lines make the long content easier to navigate than Page 2's dense dark-theme equation sections.",
+      "age_55_winner": "1",
+      "age_55_why": "Page 1 is well organized with collapsible depth and clear caveats, while Page 2 piles formulas such as the Fresnel and defocus equations and ACR steps onto a general reader.",
+      "age_65_winner": "1",
+      "age_65_why": "Page 1 uses analogies, a glossary and larger-text controls, while Page 2's small muted text on a dark background and heavy jargon are harder for this reader.",
+      "overall_winner": "1",
+      "overall_why": "Page 1 is more approachable and layered, with accurate caveats, tooltips and a glossary, whereas Page 2 is faithful but jargon-heavy with no entry point for beginners.",
+      "unsupported_page_1": [
+        "The ablation text says removing only the linear gamma-free mixing is about as damaging as All+G (+70 to +21); the paper's Table 1 labels the gamma ablation as compressing t and r before compositing, so this is a slightly loose reading but is mostly supported.",
+        "The claim that the context photo helps because saturated sky colors are recovered, and that this leaves reflected cars or hurts the clean layer, goes a bit beyond the paper, which only says the authors believe this for specific examples."
+      ],
+      "unsupported_page_2": [
+        "The claim that Generic super-resolution models (SUPIR, Real-ESRGAN) score below even the do nothing control on SSIM is unsupported: SUPIR SSIM_R is 56.8 and RESRGan SSIM_R 53.6, both below control 64.5, but SSIM_T of 64.6 and 65.6 is below control 86.3 while Bicubic SSIM_R beats control, so the blanket claim is only partly right.",
+        "The statement that Ours+rnd is significantly worse than the real context cites p<1.7e-11, but the paper attaches that p-value to the comparison of Ours versus Ours+rnd, so the attribution is questionable.",
+        "The phrase that the upsampler uses 29% fewer parameters than V-DESIRR appears only in a supplementary figure caption and is presented as a headline result, though it is supported."
+      ]
+    }
+  }
+}

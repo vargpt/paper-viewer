@@ -1,0 +1,60 @@
+{
+  "paper_id": "Konate_SphereEdit_WACV2026",
+  "paper_title": "SphereEdit: Spherical Semantic Editing in Diffusion Models",
+  "html_path": "/tmp/claude-28370/-local-home-skonate-code-AgenticAI-paper-viewer/d9f6e789-f677-4108-ac6f-842519dcbef9/scratchpad/stripped/Konate_SphereEdit_WACV2026__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-opus-5.5",
+  "hallucinations": {
+    "count": 1,
+    "major_count": 0,
+    "minor_count": 1,
+    "items": [
+      {
+        "html_quote": "Middle, no mask: skin tone and eye colour change too.",
+        "paper_evidence": "Sec. 4.4 and the Fig. 5 caption say that without masking 'lipstick spreads beyond the lips and alters skin tone', and that low thresholds cause 'global tone shifts'. The text never mentions eye colour.",
+        "severity": "minor",
+        "explanation": "The eye-colour change is a reading of the image that the paper's text does not report. The page repeats it as a finding in the Fig. 5(a) caption ('skin tone and eye colour drift')."
+      }
+    ]
+  },
+  "consistency": {
+    "score": 9,
+    "rationale": "The page covers every main element accurately.\n- Problem: attribute leakage and identity drift.\n- Method: noise-difference attribute directions normalized to unit vectors; token-specific cross-attention masks thresholded at quantile q; masked Gram-Schmidt only in overlap regions; spherical coefficients (cos θ, sin θ cos φ, sin θ sin φ); addition to the base prediction in the DDIM update; per-step activation masks.\n- Setup: Stable Diffusion v1.5, 50 steps, q=0.8, seed 0, about 12 s on an L40.\n- Results: all Table 1 values are correct, and the '6 of 8 best, 2nd on the other 2' summary checks out.\n- Qualitative findings: matches the paper's Fig. 3 descriptions of the baselines.\n- Ablations: antipodal control at ±7.5 and the masking threshold study.\n- Limitations: up to three attributes, and ambiguous opposites for race and medical imaging.\nIt also flags real ambiguities in the paper without overstating them: the direction of q, θ=φ=π/2 giving weights (0,0,1) by Eq. 4, CelebA-HQ mentioned but not evaluated, and a single seed with no variance. The only problem is a minor embellishment in a figure description.",
+    "missing_key_points": [
+      "The paper's description of under-editing by SEGA/Cycle-Diffusion is mentioned only in a caption, not in the main text",
+      "The listed contribution of unified 1D/2D/3D control levels is covered but not framed as a contribution"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 4,
+        "rationale": "There is a kid-words box, a joystick-and-stencil analogy and interactive cartoon faces that could hold a young child's attention when read aloud. Most of the page, though, is dense text about vectors, metrics and equations."
+      },
+      "15": {
+        "score": 7,
+        "rationale": "The arrow, dial and stencil metaphors are clear and the interactive toys help, and glossary tooltips define the terms. Some sections, such as the metric discussion and the angles, still get heavy for a teenager."
+      },
+      "25": {
+        "score": 9,
+        "rationale": "The explanation is layered, with optional deeper sections giving equations, an honest critique and the full table. A graduate reader would come away with an accurate understanding."
+      },
+      "35": {
+        "score": 8,
+        "rationale": "The expert summary and the stat cards give the takeaway fast, and the caveats are candid. The page is long, but navigation helps."
+      },
+      "45": {
+        "score": 8,
+        "rationale": "A clear 'why it matters' section, honest limitations and an evidence scope with a single seed and 100 images support judging trustworthiness. Practical cost is stated."
+      },
+      "55": {
+        "score": 7,
+        "rationale": "The language is mostly plain, with tooltips and a glossary. Some ML terms and the angle math may still slow a general reader."
+      },
+      "65": {
+        "score": 7,
+        "rationale": "The structure is clear, with text-size controls, a glossary and real-world framing. The number of interactive widgets and some jargon add effort for an older reader."
+      }
+    },
+    "mean_score": 7.14
+  }
+}

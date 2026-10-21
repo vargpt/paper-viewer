@@ -1,0 +1,61 @@
+{
+  "paper_id": "2404.14414",
+  "paper_title": "Removing Reflections from RAW Photos",
+  "html_path": "/tmp/claude-28370/-local-home-skonate-code-AgenticAI-paper-viewer/d9f6e789-f677-4108-ac6f-842519dcbef9/scratchpad/stripped/2404.14414__anthropic_claude-opus-5.5__run1.html",
+  "evaluator_model": "anthropic/claude-opus-5.5",
+  "hallucinations": {
+    "count": 1,
+    "major_count": 0,
+    "minor_count": 1,
+    "items": [
+      {
+        "html_quote": "No context photo: the reflected floor is removed and the person with an umbrella comes out as a separate layer.",
+        "paper_evidence": "The paper's text discusses an umbrella only for Fig. 7: 'without context our model attributes the colors in the umbrella with a reflected object' (Sec. 5.2). It gives no textual description of the Fig. 8 scene, such as a record-shop window, a reflected person with an umbrella, or a reflected floor.",
+        "severity": "minor",
+        "explanation": "These per-method descriptions of Figure 8 content (and similar captions such as 'reflection layer is a gray smear') cannot be verified from the paper. The umbrella detail may also be confused with Fig. 7."
+      }
+    ]
+  },
+  "consistency": {
+    "score": 9,
+    "rationale": "The page is highly faithful and thorough. It correctly covers the problem (m = t + r), why mixing must happen in linear XYZ before white balance (ACR steps), the geometric simulation (Fresnel, pose, double reflection, defocus) and the mixture search. Dataset sizes (12,803 RAWs, 2,233 IBLs, 1,241,091 training mixtures, 10^8 searched to about 10^7 kept) are right. It describes the base model (2.5M params, EfficientNet/BiFPN, context modulation), the mask-based upsampler, and training hyperparameters. Table 1, 2 and 3 numbers are reproduced accurately. The key claim (≈40pp gain from RAW retraining vs ≈20pp architectural spread) and the context ablations are correct. Timings are right. Limitations are well covered: saturation and hole filling, overlapping textures, rare scenes, the saturated context photo, upsampler texture copying, the 8-bit caveat, sim-only quantitative evaluation, and privacy. It honestly flags the modest context gain and the small E2E upsampler lead. Minor omissions include lens-flare generalization and a few qualitative figure descriptions that cannot be verified.",
+    "missing_key_points": [
+      "Model's ability to remove lens flares despite not being trained on them (Fig. S10) and suggestion to pre-train flare removal on reflections",
+      "Subtle-reflection museum example (Rembrandt) and blue museum-glass observation only briefly touched",
+      "Contribution claim that synthetic data obviates fine-tuning on real images is present but the explicit 10:1 synthetic:real ratio context only in collapsible detail"
+    ]
+  },
+  "explanation_quality": {
+    "by_age": {
+      "5": {
+        "score": 4,
+        "rationale": "There is a 'kid words' box, a slide-projector analogy and colorful toy canvases. Most of the page is dense text with SSIM, Fresnel and ACR steps, so a read-aloud child would get only the 'ghost picture' idea."
+      },
+      "15": {
+        "score": 7,
+        "rationale": "The analogies, interactive mixing lab, tooltips and glossary make the core idea accessible. Sections on improvement-over-control and the upsampler remain fairly technical but are followable."
+      },
+      "25": {
+        "score": 9,
+        "rationale": "Well layered, with a short version, defined terms, interactive demos and collapsible detail with exact tables. A graduate would clearly understand what was done, why RAW matters and the caveats."
+      },
+      "35": {
+        "score": 8,
+        "rationale": "The hero section and stats cards deliver the takeaway quickly, and the expert summary is precise. Depth is available on demand, though the page is long."
+      },
+      "45": {
+        "score": 8,
+        "rationale": "Practical impact (speed, full resolution, editable layers) and trustworthiness caveats (simulated test set, modest context gain, small E2E lead) are explicit and honest."
+      },
+      "55": {
+        "score": 7,
+        "rationale": "Plain-language TL;DRs, a glossary and tooltips help. Some passages are still number-heavy and assume comfort with charts and percentages."
+      },
+      "65": {
+        "score": 7,
+        "rationale": "Clear chapter structure, text-size controls and real-world relevance (shop windows, museums) help. The density of jargon in some sections and the many numbers may tire an older general reader."
+      }
+    },
+    "mean_score": 7.14
+  }
+}
