@@ -1,0 +1,77 @@
+{
+ "framework": "multiagent",
+ "model": "anthropic/claude-opus-5.5",
+ "reader_model": "anthropic/claude-sonnet-5.5",
+ "effort": "high",
+ "expert_effort": "medium",
+ "auth": "openrouter",
+ "paper": "Konate_SphereEdit_WACV2026.pdf",
+ "rounds": 1,
+ "readers": [
+  "kid",
+  "teen",
+  "professor",
+  "senior"
+ ],
+ "experts": [
+  {
+   "id": "story-eval",
+   "name": "Diffusion image-editing critic and results storyteller",
+   "sections": [
+    "edits-leak",
+    "evidence"
+   ]
+  },
+  {
+   "id": "geometry",
+   "name": "Spherical-geometry and latent-direction expert",
+   "sections": [
+    "dial"
+   ]
+  },
+  {
+   "id": "attention",
+   "name": "Stable Diffusion internals and cross-attention localization expert",
+   "sections": [
+    "one-step"
+   ]
+  }
+ ],
+ "history": [
+  {
+   "round": 1,
+   "readers": {
+    "kid": 6,
+    "teen": 7,
+    "professor": 7,
+    "senior": 6
+   },
+   "fact_check": {
+    "major": 1,
+    "minor": 8
+   },
+   "browser_problems": 0,
+   "words": 1593,
+   "editor_done": false
+  },
+  {
+   "round": "final",
+   "fact_check": {
+    "major": 0,
+    "minor": 5
+   },
+   "browser_problems": 0,
+   "note": "counted before the final fixes"
+  }
+ ],
+ "agent_sessions": 24,
+ "seconds": 1007,
+ "cost_usd_api_equivalent": 13.46,
+ "tokens": {
+  "input_tokens": 172,
+  "output_tokens": 180461,
+  "cache_read_tokens": 4354593,
+  "cache_write_tokens": 1019243
+ },
+ "workspace": "/mnt/riemann_share_2/home/tedlasai/paper-viewer/multiagent/work/Konate_SphereEdit_WACV2026__anthropic_claude-opus-5.5__run1"
+}

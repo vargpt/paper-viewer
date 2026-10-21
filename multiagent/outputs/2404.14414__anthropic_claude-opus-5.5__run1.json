@@ -1,0 +1,78 @@
+{
+ "framework": "multiagent",
+ "model": "anthropic/claude-opus-5.5",
+ "reader_model": "anthropic/claude-sonnet-5.5",
+ "effort": "high",
+ "expert_effort": "medium",
+ "auth": "openrouter",
+ "paper": "2404.14414.pdf",
+ "rounds": 1,
+ "readers": [
+  "kid",
+  "teen",
+  "professor",
+  "senior"
+ ],
+ "experts": [
+  {
+   "id": "raw-optics",
+   "name": "RAW camera pipeline and reflection-physics expert",
+   "sections": [
+    "glass-adds-light",
+    "fake-data-factory"
+   ]
+  },
+  {
+   "id": "dereflect-nets",
+   "name": "Layer-separation network and super-resolution architect",
+   "sections": [
+    "removal-system",
+    "limits-and-editing"
+   ]
+  },
+  {
+   "id": "eval-viz",
+   "name": "Image-restoration evaluation and data-visualization expert",
+   "sections": [
+    "evidence"
+   ]
+  }
+ ],
+ "history": [
+  {
+   "round": 1,
+   "readers": {
+    "kid": 5,
+    "teen": 6,
+    "professor": 7,
+    "senior": 6
+   },
+   "fact_check": {
+    "major": 0,
+    "minor": 9
+   },
+   "browser_problems": 0,
+   "words": 1956,
+   "editor_done": false
+  },
+  {
+   "round": "final",
+   "fact_check": {
+    "major": 0,
+    "minor": 8
+   },
+   "browser_problems": 0,
+   "note": "counted before the final fixes"
+  }
+ ],
+ "agent_sessions": 28,
+ "seconds": 1347,
+ "cost_usd_api_equivalent": 22.0,
+ "tokens": {
+  "input_tokens": 244,
+  "output_tokens": 222609,
+  "cache_read_tokens": 9399289,
+  "cache_write_tokens": 1785946
+ },
+ "workspace": "/mnt/riemann_share_2/home/tedlasai/paper-viewer/multiagent/work/2404.14414__anthropic_claude-opus-5.5__run1"
+}
