@@ -255,7 +255,8 @@ class Team:
 
 def _looks_like_usage_limit(text: str) -> bool:
     text = text.lower()
-    return "usage limit" in text or "limit reached" in text or "out of extra usage" in text
+    return any(k in text for k in ("usage limit", "limit reached", "out of extra usage", "session limit",
+                                   "weekly limit", "hit your limit"))
 
 
 def _brief(content) -> str:

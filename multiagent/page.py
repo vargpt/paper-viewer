@@ -6,6 +6,7 @@ mechanical problems, and turns a page into plain text for the reader agents.
 """
 import base64
 import html
+import json
 import re
 import shutil
 import subprocess
@@ -437,6 +438,34 @@ def assemble(ws: Path, plan: dict, *, readers: list[str], rounds: int, only: str
     )
 
 
+IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg")
+
+# Widgets often build image paths at run time ('figures/' + name + '.jpg'), which no regex can inline. The
+# final page carries those images in a map, and image loading is patched to take them from it.
+FIGURE_MAP_JS = """<script>(() => {
+  const F = %s;
+  const fix = (v) => (typeof v === 'string' && F[v.replace(/^\\.\\//, '')]) || v;
+  const d = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+  Object.defineProperty(HTMLImageElement.prototype, 'src', { get: d.get, set(v) { d.set.call(this, fix(v)); }, configurable: true });
+  const set = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function (n, v) { return set.call(this, n, n === 'src' ? fix(v) : v); };
+})();</script>"""
+
+
+def _data_uri(path: Path) -> str:
+    data, mime = path.read_bytes(), "image/png"
+    if path.suffix.lower() in (".jpg", ".jpeg"):
+        mime = "image/jpeg"
+    elif path.suffix.lower() in (".webp", ".gif", ".svg"):
+        mime = {"webp": "image/webp", "gif": "image/gif", "svg": "image/svg+xml"}[path.suffix.lower()[1:]]
+    elif len(data) > 400_000:  # big screenshots-of-photos compress far better as JPEG
+        pix = pymupdf.Pixmap(str(path))
+        if pix.alpha:
+            pix = pymupdf.Pixmap(pix, 0)
+        data, mime = pix.tobytes("jpg", jpg_quality=85), "image/jpeg"
+    return f"data:{mime};base64,{base64.b64encode(data).decode()}"
+
+
 def inline_images(page: str, ws: Path) -> str:
     """Embed figures/ images as data URIs so the final page is a single self-contained file."""
     figures = (ws / "figures").resolve()
@@ -445,19 +474,27 @@ def inline_images(page: str, ws: Path) -> str:
         path = (ws / m.group(2)).resolve()
         if not path.is_file() or not path.is_relative_to(figures):
             return m.group(0)
-        data, mime = path.read_bytes(), "image/png"
-        if path.suffix.lower() in (".jpg", ".jpeg"):
-            mime = "image/jpeg"
-        elif len(data) > 400_000:  # big screenshots-of-photos compress far better as JPEG
-            pix = pymupdf.Pixmap(str(path))
-            if pix.alpha:
-                pix = pymupdf.Pixmap(pix, 0)
-            data, mime = pix.tobytes("jpg", jpg_quality=85), "image/jpeg"
-        return f'{m.group(1)}data:{mime};base64,{base64.b64encode(data).decode()}{m.group(3)}'
+        return f"{m.group(1)}{_data_uri(path)}{m.group(3)}"
 
     # src="figures/..." and quoted paths in scripts ('figures/x.jpg' for PV.imageLab): a canvas can only read
     # the pixels of a same-origin image, which a data: URI is
-    return re.sub(r'''(\bsrc\s*=\s*["']|["'])(figures/[\w./-]+\.(?:png|jpe?g|webp|gif|svg))(["'])''', data_uri, page)
+    page = re.sub(r'''(\bsrc\s*=\s*["']|["'])(figures/[\w./-]+\.(?:png|jpe?g|webp|gif|svg))(["'])''', data_uri, page)
+
+    # paths built at run time: a literal prefix ('figures/' or 'figures/one-step-') plus a name that appears in the page
+    prefixes = set(re.findall(r"""["'`]figures/([\w.-]*)(?:["'`]|\$\{)""", page))
+    dynamic = {}
+    if prefixes and figures.is_dir():
+        for f in sorted(figures.iterdir()):
+            if f.suffix.lower() not in IMAGE_EXT:
+                continue
+            for pre in prefixes:
+                rest = f.stem[len(pre):] if f.stem.startswith(pre) else ""
+                if rest and re.search(rf"(?<![\w-]){re.escape(rest)}(?![\w-])", page):
+                    dynamic[f"figures/{f.name}"] = _data_uri(f)
+                    break
+    if dynamic:
+        page = page.replace("</head>", FIGURE_MAP_JS % json.dumps(dynamic) + "\n</head>", 1)
+    return page
 
 
 # ---------------------------------------------------------------- checks
